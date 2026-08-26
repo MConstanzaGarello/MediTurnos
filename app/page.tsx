@@ -7,8 +7,11 @@ export default function Home() {
     nombre: "",
     apellido: "",
     dni: "",
+    fechaNacimiento: "",
     email: "",
+    telefono: "",
     password: "",
+    confirmarPassword: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -25,10 +28,18 @@ export default function Home() {
       !form.nombre ||
       !form.apellido ||
       !form.dni ||
+      !form.fechaNacimiento ||
       !form.email ||
-      !form.password
+      !form.telefono ||
+      !form.password ||
+      !form.confirmarPassword
     ) {
       alert("Por favor, completá todos los campos.");
+      return;
+    }
+
+    if (form.password !== form.confirmarPassword) {
+      alert("Las contraseñas no coinciden.");
       return;
     }
 
@@ -40,6 +51,7 @@ export default function Home() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-white">MediTurnos</h1>
+
           <p className="text-slate-400 mt-2">
             Gestión de turnos médicos
           </p>
@@ -55,6 +67,7 @@ export default function Home() {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+
             <div>
               <label className="block text-sm text-slate-300 mb-1">
                 Nombre
@@ -99,6 +112,19 @@ export default function Home() {
 
             <div>
               <label className="block text-sm text-slate-300 mb-1">
+                Fecha de nacimiento
+              </label>
+              <input
+                type="date"
+                name="fechaNacimiento"
+                value={form.fechaNacimiento}
+                onChange={handleChange}
+                className="w-full rounded-lg bg-slate-800 border border-slate-700 px-4 py-3 text-white outline-none focus:border-cyan-400"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-slate-300 mb-1">
                 Email
               </label>
               <input
@@ -107,6 +133,20 @@ export default function Home() {
                 value={form.email}
                 onChange={handleChange}
                 placeholder="Ingresá tu email"
+                className="w-full rounded-lg bg-slate-800 border border-slate-700 px-4 py-3 text-white outline-none focus:border-cyan-400"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-slate-300 mb-1">
+                Teléfono
+              </label>
+              <input
+                type="tel"
+                name="telefono"
+                value={form.telefono}
+                onChange={handleChange}
+                placeholder="Ingresá tu teléfono"
                 className="w-full rounded-lg bg-slate-800 border border-slate-700 px-4 py-3 text-white outline-none focus:border-cyan-400"
               />
             </div>
@@ -125,12 +165,27 @@ export default function Home() {
               />
             </div>
 
+            <div>
+              <label className="block text-sm text-slate-300 mb-1">
+                Confirmar contraseña
+              </label>
+              <input
+                type="password"
+                name="confirmarPassword"
+                value={form.confirmarPassword}
+                onChange={handleChange}
+                placeholder="Repetí tu contraseña"
+                className="w-full rounded-lg bg-slate-800 border border-slate-700 px-4 py-3 text-white outline-none focus:border-cyan-400"
+              />
+            </div>
+
             <button
               type="submit"
               className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold rounded-lg py-3 mt-2 transition"
             >
               Registrarme
             </button>
+
           </form>
         </div>
       </div>
