@@ -1,36 +1,299 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MediTurnos
 
-## Getting Started
+Sistema web de gestión de turnos médicos.
 
-First, run the development server:
+Este repositorio contiene:
+
+- **Frontend**: Next.js (App Router) — carpeta raíz (`app/`, `components/`, `lib/`).
+- **Backend**: Node.js + Express + Sequelize + PostgreSQL — carpeta `backend/`.
+
+Actualmente está implementada de punta a punta la **HU-01 — Registro de paciente**
+(formulario → validaciones frontend → API backend → validaciones backend →
+PostgreSQL → paciente registrado). Las demás historias de usuario todavía no
+están implementadas.
+
+## 1. Requisitos
+
+- Node.js 20 o superior.
+- npm.
+- PostgreSQL 14 o superior (local o accesible por red).
+
+## 2. Instalación de dependencias
+
+Hay dos proyectos npm independientes: el frontend (raíz) y el backend
+(`backend/`).
+
+```bash
+# Frontend
+npm install
+
+# Backend
+cd backend
+npm install
+cd ..
+```
+
+## 3. Configuración de variables de entorno
+
+### Frontend (raíz del proyecto)
+
+```bash
+cp env.local.example .env.local
+```
+
+Contiene la URL del backend:
+
+```
+NEXT_PUBLIC_API_URL=http://localhost:4000
+```
+
+### Backend (`backend/`)
+
+```bash
+cd backend
+cp .env.example .env
+```
+
+Completá `backend/.env` con los datos de tu PostgreSQL local:
+
+```
+PORT=4000
+NODE_ENV=development
+CORS_ORIGIN=http://localhost:3000
+
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_NAME=mediturnos
+DB_USER=postgres
+DB_PASSWORD=postgres
+
+BCRYPT_SALT_ROUNDS=10
+```
+
+`backend/.env` **no se sube al repositorio** (está en `.gitignore`); solo se
+versiona `backend/.env.example` como plantilla.
+
+## 4. Configuración de PostgreSQL
+
+Asegurate de tener un servidor PostgreSQL corriendo y accesible con las
+credenciales que pusiste en `backend/.env`.
+
+## 5. Creación de la base de datos
+
+Desde `backend/`:
+
+```bash
+npm run db:create
+```
+
+Esto crea la base `mediturnos` (o el nombre que hayas puesto en `DB_NAME`)
+usando `sequelize-cli`.
+
+## 6. Ejecución de las migraciones
+
+Todavía desde `backend/`:
+
+```bash
+npm run db:migrate
+```
+
+Esto crea la tabla `pacientes` con las columnas `id, nombre, apellido, dni,
+fecha_nacimiento, email, telefono, password, created_at, updated_at`, y las
+restricciones `UNIQUE` sobre `dni` y `email`.
+
+Para revertir la última migración: `npm run db:migrate:undo`.
+
+## 7. Ejecución del backend
+
+Desde `backend/`:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+El servidor queda escuchando en **http://localhost:4000**.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Podés verificar que está vivo con:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+curl http://localhost:4000/health
+```
 
-## Learn More
+## 8. Ejecución del frontend
 
-To learn more about Next.js, take a look at the following resources:
+Desde la raíz del proyecto:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+La app queda disponible en **http://localhost:3000**.
 
-## Deploy on Vercel
+## 9. Cómo probar el registro (HU-01)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Con el backend (`:4000`) y el frontend (`:3000`) corriendo, abrí
+   `http://localhost:3000`.
+2. Completá el formulario de registro con datos válidos y hacé click en
+   "Registrarme".
+3. El botón muestra "Registrando..." mientras se procesa.
+4. Si todo es válido, se muestra la pantalla de "¡Registro exitoso!" y el
+   paciente queda guardado en PostgreSQL (tabla `pacientes`, con la
+   contraseña hasheada con bcrypt, nunca en texto plano).
+5. Si volvés a registrar el mismo DNI o el mismo correo, el backend
+   responde `409` y el formulario muestra el error debajo del campo
+   correspondiente ("Este DNI ya se encuentra registrado." / "Este correo
+   ya se encuentra registrado.").
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+También podés probar la API directamente:
+
+```bash
+curl -i -X POST http://localhost:4000/api/pacientes/registro \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nombre": "María",
+    "apellido": "González",
+    "dni": "30123456",
+    "fechaNacimiento": "1990-05-10",
+    "email": "maria.gonzalez@gmail.com",
+    "telefono": "011 3456-7890",
+    "password": "Segura123",
+    "confirmarPassword": "Segura123"
+  }'
+```
+
+## 10. URLs y puertos
+
+| Servicio                | URL                              |
+| ------------------------ | --------------------------------- |
+| Frontend (Next.js)       | http://localhost:3000             |
+| Backend (Express API)    | http://localhost:4000             |
+| Endpoint de registro     | `POST /api/pacientes/registro`    |
+| Health check del backend | `GET /health`                     |
+
+## 11. Arquitectura
+
+```
+mediturnos/
+├── app/                        # Next.js App Router (frontend)
+│   ├── layout.tsx
+│   ├── page.tsx                 # Pantalla de registro
+│   └── globals.css
+├── components/
+│   └── patient/
+│       ├── RegisterForm.tsx     # Formulario de registro (orquesta todo)
+│       ├── FormField.tsx        # Input reutilizable (label + error)
+│       ├── EmailField.tsx       # Email + sugerencias de dominio
+│       └── PasswordRequirements.tsx
+├── lib/
+│   ├── types/patient.ts         # Tipos compartidos del formulario
+│   ├── validation/
+│   │   ├── patient.ts           # Reglas de validación (UX)
+│   │   └── email-domains.ts     # Sugerencias de dominio de email
+│   └── services/
+│       └── patientService.ts    # Cliente HTTP hacia el backend
+├── env.local.example
+└── backend/                     # API REST (Node.js + Express + Sequelize)
+    ├── src/
+    │   ├── server.ts             # Punto de entrada
+    │   ├── app.ts                # Configuración de Express
+    │   ├── config/
+    │   │   ├── env.ts            # Variables de entorno tipadas
+    │   │   └── database.ts       # Instancia de Sequelize
+    │   ├── db/models/
+    │   │   ├── Paciente.ts       # Modelo Sequelize
+    │   │   └── index.ts
+    │   ├── modules/pacientes/
+    │   │   ├── paciente.routes.ts
+    │   │   ├── paciente.controller.ts
+    │   │   ├── paciente.service.ts   # Reglas de negocio + acceso a datos
+    │   │   ├── paciente.validator.ts # Validación del backend
+    │   │   └── paciente.types.ts
+    │   ├── middlewares/
+    │   │   ├── errorHandler.ts
+    │   │   └── notFound.ts
+    │   └── utils/
+    │       ├── httpError.ts
+    │       └── password.ts       # Hash/compare con bcrypt
+    ├── migrations/
+    │   └── 20260828000000-create-pacientes.js
+    ├── config/config.js          # Config de sequelize-cli
+    ├── .sequelizerc
+    └── .env.example
+```
+
+Separación de responsabilidades:
+
+- **Frontend**: solo UI, validación de experiencia de usuario y llamado a
+  la API (`lib/services/patientService.ts`). No accede a la base de datos.
+- **Backend**: valida de nuevo todo el payload, aplica las reglas de
+  negocio (unicidad de DNI/email, hash de contraseña) y es el único que
+  habla con PostgreSQL.
+- **Base de datos**: PostgreSQL con restricciones `UNIQUE` reales sobre
+  `dni` y `email`, gestionada con migraciones de Sequelize (no hay SQL
+  suelto fuera del proyecto).
+
+## 12. Respuestas de la API
+
+`POST /api/pacientes/registro`
+
+| Caso                     | Status | Cuerpo                                                        |
+| ------------------------- | ------ | -------------------------------------------------------------- |
+| Registro exitoso          | 201    | `{ message, paciente }` (sin password)                         |
+| Datos inválidos           | 400    | `{ message, errors: { campo: mensaje, ... } }`                 |
+| DNI ya registrado         | 409    | `{ message: "Este DNI ya se encuentra registrado.", errors }`  |
+| Email ya registrado       | 409    | `{ message: "Este correo ya se encuentra registrado.", errors }` |
+| Error interno             | 500    | `{ message: "Ocurrió un error interno. Intente nuevamente más tarde." }` |
+
+## 13. Qué queda preparado para las próximas historias de usuario
+
+- Estructura modular en el backend (`src/modules/<entidad>/routes|controller|service|validator`)
+  lista para agregar nuevos módulos (por ejemplo `turnos`, `medicos`) sin
+  tocar el de pacientes.
+- `createApp()` centraliza CORS, parseo de JSON y manejo de errores, así
+  que agregar un router nuevo es una línea en `app.ts`.
+- El modelo `Paciente` y su migración quedan listos para ser referenciados
+  (FK) desde futuras entidades como `Turno`.
+- Componentes de formulario (`FormField`, `PasswordRequirements`,
+  `EmailField`) son genéricos y reutilizables para futuras pantallas
+  (login, edición de perfil, etc.).
+- `patientService.ts` establece el patrón para futuros servicios HTTP del
+  frontend (manejo de errores tipado, `NEXT_PUBLIC_API_URL`).
+
+## 14. Dependencias nuevas instaladas
+
+**Backend** (proyecto nuevo, `backend/package.json`):
+
+- `express`, `cors` — servidor HTTP y CORS.
+- `sequelize`, `pg`, `pg-hstore` — ORM y driver de PostgreSQL.
+- `bcrypt` — hash de contraseñas.
+- `dotenv` — carga de variables de entorno.
+- Dev: `typescript`, `ts-node-dev`, `sequelize-cli`, `@types/*`.
+
+**Frontend**: no se agregaron dependencias nuevas (se usa `fetch` nativo).
+
+## 15. Decisiones técnicas importantes
+
+- Se creó un **backend Express separado** (`/backend`) en vez de usar Route
+  Handlers de Next.js, porque el proyecto no tenía backend ni base de
+  datos configurados y la consigna pide explícitamente Node.js + Express +
+  PostgreSQL + Sequelize en ese caso, sin modificar el frontend Next.js
+  existente.
+- Las contraseñas se hashean con **bcrypt** (nunca se guardan ni se
+  devuelven en texto plano).
+- La verificación de DNI/email duplicados se hace primero con una consulta
+  (`findOne`) y además está protegida por restricciones `UNIQUE` reales en
+  PostgreSQL (creadas por migración), por si dos registros llegan casi al
+  mismo tiempo.
+- Las validaciones de formato (nombre, DNI, email, teléfono, contraseña)
+  están duplicadas a propósito en frontend (`lib/validation/patient.ts`,
+  para UX instantánea) y backend (`paciente.validator.ts`, obligatoria por
+  seguridad) — el backend nunca confía en el frontend.
+- Next.js 16 usa Route Handlers para APIs propias, pero como se decidió un
+  backend Express independiente, no se tocó la carpeta `app/` para
+  agregar rutas de API.
+
+---
+
+Generado originalmente con `create-next-app`. Para más información de
+Next.js, ver la documentación oficial en `node_modules/next/dist/docs/`
+(esta versión de Next.js incluye su propia documentación local).
