@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { env } from "./config/env";
 import { pacienteRouter } from "./modules/pacientes/paciente.routes";
+import { authRouter } from "./modules/auth/auth.routes";
 import { notFoundHandler } from "./middlewares/notFound";
 import { errorHandler } from "./middlewares/errorHandler";
 
@@ -16,6 +17,7 @@ export function createApp() {
   });
 
   app.use("/api/pacientes", pacienteRouter);
+  app.use("/api/auth", authRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
