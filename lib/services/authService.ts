@@ -28,12 +28,13 @@ export class LoginError extends Error {
  * El backend devuelve:
  * - 404 -> "El usuario no se encuentra registrado."
  * - 401 -> "Correo electrónico o contraseña incorrectos."
- * - 200 -> datos públicos del paciente (nunca la contraseña).
+ * - 200 -> datos públicos del paciente (nunca la contraseña) + un JWT
+ *   que identifica la sesión (ver lib/auth/session.ts para persistirlo).
  */
 export async function loginPatient(
   email: string,
   password: string
-): Promise<AuthenticatedPatient> {
+): Promise<{ paciente: AuthenticatedPatient; token: string }> {
   let response: Response;
 
   try {
@@ -64,10 +65,13 @@ export async function loginPatient(
     );
   }
 
-  const body = (payload ?? {}) as { paciente?: AuthenticatedPatient };
-  if (!body.paciente) {
+  const body = (payload ?? {}) as {
+    paciente?: AuthenticatedPatient;
+    token?: string;
+  };
+  if (!body.paciente || !body.token) {
     throw new LoginError(response.status, "Respuesta inesperada del servidor.");
   }
 
-  return body.paciente;
+  return { paciente: body.paciente, token: body.token };
 }

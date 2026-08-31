@@ -23,10 +23,11 @@ export async function loginHandler(
       throw HttpError.badRequest("Datos inválidos.", errors);
     }
 
-    const paciente = await loginPatient(data);
+    const { paciente, token } = await loginPatient(data);
     res.status(200).json({
       message: "Inicio de sesión exitoso.",
       paciente,
+      token,
     });
   } catch (error) {
     next(error);

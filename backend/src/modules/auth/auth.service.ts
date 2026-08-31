@@ -1,6 +1,7 @@
 import { Paciente } from "../../db/models/Paciente";
 import { comparePassword } from "../../utils/password";
 import { HttpError } from "../../utils/httpError";
+import { signSessionToken } from "../../utils/jwt";
 import type { LoginInput } from "./auth.types";
 import type { PublicPatient } from "../pacientes/paciente.types";
 
@@ -22,9 +23,13 @@ function toPublicPatient(paciente: Paciente): PublicPatient {
  * - Cuenta inexistente -> "El usuario no se encuentra registrado."
  * - Contraseña incorrecta -> "Correo electrónico o contraseña incorrectos."
  * - Credenciales correctas -> devuelve los datos públicos del paciente
- *   (nunca la contraseña) para que el frontend redirija y muestre su nombre.
+ *   (nunca la contraseña) más un JWT que identifica la sesión, para que
+ *   HU-03 (y cualquier otra pantalla que necesite saber quién está
+ *   logueado) lo pueda usar.
  */
-export async function loginPatient(input: LoginInput): Promise<PublicPatient> {
+export async function loginPatient(
+  input: LoginInput
+): Promise<{ paciente: PublicPatient; token: string }> {
   const paciente = await Paciente.findOne({
     where: { email: input.email.toLowerCase() },
   });
@@ -44,5 +49,10 @@ export async function loginPatient(input: LoginInput): Promise<PublicPatient> {
     );
   }
 
-  return toPublicPatient(paciente);
+  const token = signSessionToken({
+    pacienteId: paciente.id,
+    email: paciente.email,
+  });
+
+  return { paciente: toPublicPatient(paciente), token };
 }

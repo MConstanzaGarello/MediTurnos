@@ -1,14 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import RegisterForm from "@/components/patient/RegisterForm";
 import {
   loginPatient,
   LoginError,
   type AuthenticatedPatient,
 } from "@/lib/services/authService";
+import { saveSession } from "@/lib/auth/session";
 
 export default function Home() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"login" | "registro">("login");
 
   // --- HU-02: Inicio de sesión ---
@@ -69,11 +72,18 @@ export default function Home() {
 
     setIsLoggingIn(true);
     try {
-      const paciente = await loginPatient(
+      const { paciente, token } = await loginPatient(
         loginForm.email,
         loginForm.password
       );
+      saveSession(token, {
+        id: paciente.id,
+        nombre: paciente.nombre,
+        apellido: paciente.apellido,
+        email: paciente.email,
+      });
       setLoggedInPatient(paciente);
+      router.push("/turnos/nuevo");
     } catch (error) {
       if (error instanceof LoginError) {
         setLoginSubmitError(error.message);

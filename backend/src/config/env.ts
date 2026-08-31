@@ -22,7 +22,14 @@ export const env = {
     port: Number(process.env.DB_PORT || 5432),
     name: required("DB_NAME", "mediturnos"),
     user: required("DB_USER", "postgres"),
-    password: process.env.DB_PASSWORD ?? "postgres",
+    password: process.env.DB_PASSWORD ?? "Cuatriciclo12",
     ssl: process.env.DB_SSL === "true",
+  },
+  jwt: {
+    // TODO (seguridad): en producción JWT_SECRET debe venir sí o sí de una
+    // variable de entorno real y no del valor por defecto. Para el TP
+    // alcanza, pero no lo dejen así si esto se despliega de verdad.
+    secret: process.env.JWT_SECRET || "mediturnos-dev-secret-cambiar-en-produccion",
+    expiresIn: process.env.JWT_EXPIRES_IN || "8h",
   },
 };
