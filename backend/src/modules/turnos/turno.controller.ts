@@ -1,7 +1,11 @@
 import type { NextFunction, Request, Response } from "express";
 import { HttpError } from "../../utils/httpError";
 import { validateTurnoCreateInput } from "./turno.validator";
-import { createTurno, getHorariosDisponibilidad } from "./turno.service";
+import {
+  createTurno,
+  getHorariosDisponibilidad,
+  getTurnosDelPaciente,
+} from "./turno.service";
 
 /** GET /api/turnos/horarios-disponibles?profesionalId=1&fecha=2026-08-30 */
 export async function getHorariosDisponibilidadHandler(
@@ -62,6 +66,30 @@ export async function createTurnoHandler(
       message: "Turno solicitado correctamente.",
       turno,
     });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * GET /api/turnos/mis-turnos (protegido por requireAuth) — HU-04.
+ *
+ * Devuelve 200 con `{ turnos: MiTurno[] }`, que puede ser una lista vacía.
+ * El paciente sale del JWT (req.pacienteId), así que un paciente nunca
+ * puede ver los turnos de otro.
+ */
+export async function getMisTurnosHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    if (!req.pacienteId) {
+      throw HttpError.unauthorized("Debe iniciar sesión para continuar.");
+    }
+
+    const turnos = await getTurnosDelPaciente(req.pacienteId);
+    res.status(200).json({ turnos });
   } catch (error) {
     next(error);
   }

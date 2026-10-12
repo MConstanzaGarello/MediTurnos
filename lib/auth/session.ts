@@ -16,7 +16,7 @@ export interface SessionPatient {
   email: string;
 }
 
-const STORAGE_KEY = "mediturnos_session";
+export const STORAGE_KEY = "mediturnos_session";
 
 interface StoredSession {
   token: string;

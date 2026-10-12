@@ -1,9 +1,10 @@
 import { UniqueConstraintError } from "sequelize";
-import { Turno } from "../../db/models";
+import { Especialidad, Profesional, Turno } from "../../db/models";
 import { HttpError } from "../../utils/httpError";
 import { HORARIOS_POSIBLES } from "./turno.constants";
 import type {
   HorarioDisponibilidad,
+  MiTurno,
   PublicTurno,
   TurnoCreateInput,
 } from "./turno.types";
@@ -83,4 +84,49 @@ export async function createTurno(
     }
     throw error;
   }
+}
+
+function toMiTurno(turno: Turno): MiTurno {
+  return {
+    id: turno.id,
+    fecha: turno.fecha,
+    hora: turno.hora,
+    estado: turno.estado,
+    especialidad: {
+      id: turno.especialidadId,
+      nombre: turno.Especialidad?.nombre ?? "",
+    },
+    profesional: {
+      id: turno.profesionalId,
+      nombre: turno.Profesional?.nombre ?? "",
+      info: turno.Profesional?.info ?? "",
+    },
+  };
+}
+
+/**
+ * HU-04 — Consultar mis turnos.
+ *
+ * Devuelve SOLO los turnos del paciente indicado (`pacienteId` sale del
+ * JWT verificado por requireAuth, nunca de la URL ni del body), con la
+ * especialidad y el profesional de cada uno, ordenados por fecha y hora
+ * ascendente (criterio: "Los turnos deberán mostrarse ordenados por
+ * fecha"). Si no tiene turnos devuelve una lista vacía: el mensaje "No
+ * posee turnos programados." lo muestra el frontend.
+ */
+export async function getTurnosDelPaciente(pacienteId: number): Promise<MiTurno[]> {
+  const turnos = await Turno.findAll({
+    where: { pacienteId },
+    include: [
+      { model: Especialidad, attributes: ["id", "nombre"] },
+      { model: Profesional, attributes: ["id", "nombre", "info"] },
+    ],
+    order: [
+      ["fecha", "ASC"],
+      ["hora", "ASC"],
+      ["id", "ASC"],
+    ],
+  });
+
+  return turnos.map(toMiTurno);
 }

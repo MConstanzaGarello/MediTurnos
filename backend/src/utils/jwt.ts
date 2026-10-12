@@ -1,4 +1,4 @@
-import jwt from "jsonwebtoken";
+import jwt, { type SignOptions } from "jsonwebtoken";
 import { env } from "../config/env";
 
 export interface SessionTokenPayload {
@@ -12,7 +12,10 @@ export interface SessionTokenPayload {
  * turno en HU-03).
  */
 export function signSessionToken(payload: SessionTokenPayload): string {
-  return jwt.sign(payload, env.jwt.secret, { expiresIn: env.jwt.expiresIn });
+  return jwt.sign(payload, env.jwt.secret, {
+    // El tipo de jsonwebtoken exige un formato tipo "8h" / "30m"; viene de .env.
+    expiresIn: env.jwt.expiresIn as SignOptions["expiresIn"],
+  });
 }
 
 /**
