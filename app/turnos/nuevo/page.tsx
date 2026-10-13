@@ -19,14 +19,7 @@ import type {
   Profesional,
 } from "@/lib/types/turno";
 import { clearSession, getSession, type SessionPatient } from "@/lib/auth/session";
-
-const NAV_ITEMS = [
-  { label: "Inicio", active: false },
-  { label: "Nuevo Turno", active: true },
-  { label: "Mis Turnos", active: false },
-  { label: "Historial", active: false },
-  { label: "Mi Perfil", active: false },
-];
+import { PatientShell } from "@/components/layout/PatientShell";
 
 const DIAS_SEMANA = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sa", "Do"];
 
@@ -312,73 +305,7 @@ export default function NuevoTurnoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex">
-      {/* Sidebar */}
-      <aside className="w-60 shrink-0 border-r border-slate-800 bg-slate-900/40 flex flex-col">
-        <div className="h-16 flex items-center gap-2 px-5 border-b border-slate-800">
-          <span className="w-7 h-7 rounded-full bg-cyan-500 flex items-center justify-center text-slate-950">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-4 h-4"
-            >
-              <path d="M11 2v2" />
-              <path d="M5 2v2" />
-              <path d="M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1" />
-              <path d="M8 15a6 6 0 0 0 12 0v-3" />
-              <circle cx="20" cy="10" r="2" />
-            </svg>
-          </span>
-          <span className="text-white font-semibold tracking-wide text-sm">
-            MEDITURNOS
-          </span>
-        </div>
-
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          {NAV_ITEMS.map((item) => (
-            <div
-              key={item.label}
-              className={
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm cursor-default " +
-                (item.active
-                  ? "bg-cyan-500 text-slate-950 font-semibold"
-                  : "text-slate-300 hover:bg-slate-800")
-              }
-            >
-              <span
-                className={
-                  "w-1.5 h-1.5 rounded-full " +
-                  (item.active ? "bg-slate-950" : "bg-slate-600")
-                }
-              />
-              {item.label}
-            </div>
-          ))}
-        </nav>
-      </aside>
-
-      {/* Columna principal */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Topbar */}
-        <header className="h-16 border-b border-slate-800 flex items-center justify-end px-8 gap-4">
-          <span className="text-slate-400 text-lg">🔔</span>
-          <span className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 text-sm">
-            👤
-          </span>
-          <span className="text-slate-300 text-sm">{sessionPatient.nombre}</span>
-          <button
-            type="button"
-            onClick={handleCerrarSesion}
-            className="text-slate-500 hover:text-red-400 text-xs transition"
-          >
-            Salir
-          </button>
-        </header>
-
+    <PatientShell paciente={sessionPatient} onCerrarSesion={handleCerrarSesion}>
         <main className="flex-1 px-8 py-8">
           <h1 className="text-2xl font-bold text-white">
             Solicitar Nuevo Turno
@@ -641,7 +568,6 @@ export default function NuevoTurnoPage() {
             </div>
           </div>
         </main>
-      </div>
-    </div>
+    </PatientShell>
   );
 }

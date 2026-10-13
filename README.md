@@ -161,6 +161,44 @@ curl -i -X POST http://localhost:4000/api/pacientes/registro \
   }'
 ```
 
+## 9.1 Cómo probar "Mis turnos" (HU-04)
+
+1. Aplicá la migración nueva (agrega la columna `estado` a `turnos`):
+   `cd backend && npm run db:migrate`.
+2. Con backend y frontend corriendo, iniciá sesión y pedí uno o más turnos
+   desde "Nuevo Turno".
+3. Entrá a **Mis Turnos** desde el menú lateral
+   (`http://localhost:3000/turnos/mis-turnos`).
+4. Se listan solo tus turnos, ordenados por fecha, con especialidad,
+   profesional, fecha, horario y estado. Pestañas: **Próximos**
+   (confirmados de hoy en adelante) y **Cancelados**. Los turnos pasados
+   quedan para el Historial (HU-07).
+5. Sin turnos se muestra "No posee turnos programados."; si el backend no
+   responde, "No fue posible obtener los turnos." con un botón Reintentar.
+
+Por API:
+
+```bash
+curl -H "Authorization: Bearer <token del login>" http://localhost:4000/api/turnos/mis-turnos
+```
+
+## 9.2 Pruebas automáticas
+
+```bash
+# Backend (Jest + Supertest). Usa una base aparte: mediturnos_test
+cd backend
+npm test
+
+# Frontend (Vitest)
+cd ..
+npm test
+```
+
+Las pruebas de integración del backend crean la base `mediturnos_test`
+(o la de `DB_NAME_TEST`) y le aplican todas las migraciones desde cero, así
+que no tocan tus datos de desarrollo. Necesitan PostgreSQL corriendo con
+las credenciales de `backend/.env`.
+
 ## 10. URLs y puertos
 
 | Servicio                | URL                              |
@@ -168,6 +206,7 @@ curl -i -X POST http://localhost:4000/api/pacientes/registro \
 | Frontend (Next.js)       | http://localhost:3000             |
 | Backend (Express API)    | http://localhost:4000             |
 | Endpoint de registro     | `POST /api/pacientes/registro`    |
+| Mis turnos (HU-04)       | `GET /api/turnos/mis-turnos` (requiere sesión) |
 | Health check del backend | `GET /health`                     |
 
 ## 11. Arquitectura

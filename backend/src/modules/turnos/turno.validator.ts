@@ -65,3 +65,32 @@ export function validateTurnoCreateInput(payload: unknown): {
     data: { especialidadId, profesionalId, fecha, hora },
   };
 }
+
+export interface TurnoReprogramarInput {
+  fecha: string;
+  hora: string;
+}
+
+export function validateTurnoReprogramarInput(payload: unknown): {
+  errors: Partial<Record<"fecha" | "hora", string>>;
+  data: TurnoReprogramarInput | null;
+} {
+  const errors: Partial<Record<"fecha" | "hora", string>> = {};
+  const body = (payload && typeof payload === "object" ? payload : {}) as Record<string, unknown>;
+
+  const fecha = typeof body.fecha === "string" ? body.fecha.trim() : "";
+  const hora = typeof body.hora === "string" ? body.hora.trim() : "";
+
+  if (!fecha || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+    errors.fecha = "Seleccione una fecha válida.";
+  } else if (new Date(`${fecha}T00:00:00Z`).getTime() < new Date().setUTCHours(0, 0, 0, 0)) {
+    errors.fecha = "Seleccione una fecha futura.";
+  }
+
+  if (!hora || !/^([01]\d|2[0-3]):[0-5]\d$/.test(hora)) {
+    errors.hora = "Seleccione un horario disponible.";
+  }
+
+  if (Object.keys(errors).length > 0) return { errors, data: null };
+  return { errors, data: { fecha, hora } };
+}
