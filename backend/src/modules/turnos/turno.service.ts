@@ -1,7 +1,7 @@
-import { UniqueConstraintError } from "sequelize";
+import { Op, UniqueConstraintError } from "sequelize";
 import { Especialidad, Profesional, Turno } from "../../db/models";
 import { HttpError } from "../../utils/httpError";
-import { HORARIOS_POSIBLES } from "./turno.constants";
+import { ESTADO_CANCELADO, HORARIOS_POSIBLES } from "./turno.constants";
 import type {
   HorarioDisponibilidad,
   MiTurno,
@@ -31,7 +31,7 @@ export async function getHorariosDisponibilidad(
   fecha: string
 ): Promise<HorarioDisponibilidad[]> {
   const turnosDelDia = await Turno.findAll({
-    where: { profesionalId, fecha },
+    where: { profesionalId, fecha, estado: { [Op.ne]: ESTADO_CANCELADO } },
   });
   const ocupados = new Set(turnosDelDia.map((t) => t.hora));
 
@@ -59,6 +59,7 @@ export async function createTurno(
       profesionalId: input.profesionalId,
       fecha: input.fecha,
       hora: input.hora,
+      estado: { [Op.ne]: ESTADO_CANCELADO },
     },
   });
 

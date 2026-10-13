@@ -5,6 +5,7 @@ import {
   getMisTurnosHandler,
 } from "./turno.controller";
 import { requireAuth } from "../../middlewares/requireAuth";
+import { cancelTurnoHandler } from "./turno.cancelar";
 
 export const turnoRouter = Router();
 
@@ -18,3 +19,7 @@ turnoRouter.get("/mis-turnos", requireAuth, getMisTurnosHandler);
 
 // Pedir un turno sí requiere sesión: el paciente sale del JWT, no del body.
 turnoRouter.post("/", requireAuth, createTurnoHandler);
+
+
+// HU-05: cancelar un turno propio (también requiere sesión).
+turnoRouter.patch("/:id/cancelar", requireAuth, cancelTurnoHandler);

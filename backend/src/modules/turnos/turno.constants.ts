@@ -31,3 +31,7 @@ export const HORARIOS_POSIBLES = [
 export const ESTADOS_TURNO = ["confirmado", "cancelado"] as const;
 
 export type EstadoTurno = (typeof ESTADOS_TURNO)[number];
+
+
+/** Estado de un turno cancelado (HU-05). */
+export const ESTADO_CANCELADO: EstadoTurno = "cancelado";
