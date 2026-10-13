@@ -222,3 +222,53 @@ export async function getMisTurnos(): Promise<MiTurno[]> {
 
   return body.turnos;
 }
+
+
+/**
+ * HU-05 — Cancelar un turno propio.
+ * Envía la solicitud autenticada al backend.
+ */
+export async function cancelarTurno(
+  turnoId: number
+): Promise<void> {
+  const token = getToken();
+
+  if (!token) {
+    throw new TurnoRequestError(
+      401,
+      "Debe iniciar sesión para continuar."
+    );
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(
+      `${API_BASE_URL}/api/turnos/${turnoId}/cancelar`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+  } catch {
+    throw new TurnoRequestError(
+      0,
+      "No fue posible cancelar el turno. Intente nuevamente."
+    );
+  }
+
+  const payload = await parseJsonSafe(response);
+
+  if (!response.ok) {
+    const body = (payload ?? {}) as Partial<ApiErrorResponse>;
+
+    throw new TurnoRequestError(
+      response.status,
+      body.message ??
+        "No fue posible cancelar el turno. Intente nuevamente."
+    );
+  }
+}
+
