@@ -1,10 +1,14 @@
 import type { NextFunction, Request, Response } from "express";
 import { HttpError } from "../../utils/httpError";
-import { validateTurnoCreateInput } from "./turno.validator";
+import {
+  validateTurnoCreateInput,
+  validateTurnoReprogramarInput,
+} from "./turno.validator";
 import {
   createTurno,
   getHorariosDisponibilidad,
   getTurnosDelPaciente,
+  reprogramarTurno,
 } from "./turno.service";
 
 /** GET /api/turnos/horarios-disponibles?profesionalId=1&fecha=2026-08-30 */
@@ -90,6 +94,37 @@ export async function getMisTurnosHandler(
 
     const turnos = await getTurnosDelPaciente(req.pacienteId);
     res.status(200).json({ turnos });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function reprogramarTurnoHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    if (!req.pacienteId) {
+      throw HttpError.unauthorized("Debe iniciar sesión para continuar.");
+    }
+
+    const turnoId = Number(req.params.id);
+    if (Number.isNaN(turnoId)) throw HttpError.badRequest("ID de turno inválido.");
+
+    const { errors, data } = validateTurnoReprogramarInput(req.body);
+
+    if (!data || Object.keys(errors).length > 0) {
+      const primerMensaje = Object.values(errors)[0] ?? "Datos inválidos.";
+      throw HttpError.badRequest(primerMensaje, errors);
+    }
+
+    const turno = await reprogramarTurno(turnoId, req.pacienteId, data.fecha, data.hora);
+    
+    res.status(200).json({
+      message: "El turno fue reprogramado correctamente.",
+      turno,
+    });
   } catch (error) {
     next(error);
   }

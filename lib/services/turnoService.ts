@@ -272,3 +272,46 @@ export async function cancelarTurno(
   }
 }
 
+/**
+ * HU-06 — Reprogramar turno.
+ *
+ * Cambia fecha y hora de un turno propio confirmado. El paciente sale del
+ * JWT; el backend valida pertenencia, 24 h de anticipación y que el nuevo
+ * horario esté libre.
+ */
+export async function reprogramarTurno(
+  turnoId: number,
+  fecha: string,
+  hora: string
+): Promise<void> {
+  const token = getToken();
+  if (!token) {
+    throw new TurnoRequestError(401, "Debe iniciar sesión para continuar.");
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/turnos/${turnoId}/reprogramar`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ fecha, hora }),
+    });
+  } catch {
+    throw new TurnoRequestError(
+      0,
+      "No fue posible reprogramar el turno. Intente nuevamente."
+    );
+  }
+
+  if (!response.ok) {
+    const payload = await parseJsonSafe(response);
+    const body = (payload ?? {}) as Partial<ApiErrorResponse>;
+    throw new TurnoRequestError(
+      response.status,
+      body.message ?? "No fue posible reprogramar el turno. Intente nuevamente."
+    );
+  }
+}

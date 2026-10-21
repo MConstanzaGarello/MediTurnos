@@ -2,12 +2,14 @@
 
 // HU-04 — Consultar mis turnos.
 // HU-05 — Cancelar turno.
+// HU-06 — Reprogramar turno.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PatientShell } from "@/components/layout/PatientShell";
 import { TurnoCard } from "@/components/turnos/TurnoCard";
+import ModalReprogramar from "@/components/turnos/ModalReprogramar";
 import { clearSession } from "@/lib/auth/session";
 import { useSessionPatient } from "@/lib/auth/useSessionPatient";
 import {
@@ -50,6 +52,9 @@ export default function MisTurnosPage() {
   const [cancelandoId, setCancelandoId] = useState<number | null>(null);
   const [errorCancelar, setErrorCancelar] = useState("");
   const [mensajeCancelar, setMensajeCancelar] = useState("");
+
+  // HU-06: turno que se está reprogramando (abre el modal).
+  const [turnoAReprogramar, setTurnoAReprogramar] = useState<MiTurno | null>(null);
 
   const cerrarSesionYSalir = useCallback(() => {
     clearSession();
@@ -117,9 +122,9 @@ export default function MisTurnosPage() {
   const turnosVisibles = porPestana[pestana];
 
   /**
-   * HU-05 — Cancelar turno.
-   * Solo permite cancelar turnos confirmados cuya fecha
-   * sea hoy o posterior.
+   * Botones de cada turno confirmado con fecha de hoy en adelante:
+   * - HU-06: "Reprogramar" abre el modal para elegir nueva fecha y horario.
+   * - HU-05: "Cancelar" pide confirmación y cancela el turno.
    */
   function renderAcciones(turno: MiTurno) {
     if (
@@ -167,7 +172,20 @@ export default function MisTurnosPage() {
     }
 
     return (
-      <button
+      <>
+        <button
+          type="button"
+          onClick={() => {
+            setMensajeCancelar("");
+            setErrorCancelar("");
+            setTurnoAReprogramar(turno);
+          }}
+          disabled={cancelandoId !== null}
+          className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Reprogramar
+        </button>
+        <button
         type="button"
         onClick={manejarCancelacion}
         disabled={cancelandoId !== null}
@@ -175,6 +193,7 @@ export default function MisTurnosPage() {
       >
         {procesando ? "Cancelando..." : "Cancelar"}
       </button>
+      </>
     );
   }
 
@@ -311,6 +330,17 @@ export default function MisTurnosPage() {
             ))
           )}
         </section>
+
+        {turnoAReprogramar && (
+          <ModalReprogramar
+            turno={turnoAReprogramar}
+            onClose={() => setTurnoAReprogramar(null)}
+            onSuccess={() => {
+              setTurnoAReprogramar(null);
+              cargarTurnos();
+            }}
+          />
+        )}
       </main>
     </PatientShell>
   );

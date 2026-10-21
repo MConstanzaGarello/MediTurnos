@@ -131,3 +131,50 @@ export async function getTurnosDelPaciente(pacienteId: number): Promise<MiTurno[
 
   return turnos.map(toMiTurno);
 }
+
+/**
+ * HU-06 — Reprogramar turno.
+ */
+export async function reprogramarTurno(
+  turnoId: number,
+  pacienteId: number,
+  nuevaFecha: string,
+  nuevaHora: string
+): Promise<PublicTurno> {
+  const turno = await Turno.findOne({ where: { id: turnoId, pacienteId } });
+
+  if (!turno) {
+    throw HttpError.notFound("El turno no existe o no te pertenece.");
+  }
+
+  if (turno.estado !== "confirmado") {
+    throw HttpError.badRequest("Solo se pueden reprogramar turnos confirmados.");
+  }
+
+  const fechaTurnoOriginal = new Date(`${turno.fecha}T${turno.hora}:00-03:00`);
+  const ahora = new Date();
+  const horasDiferencia = (fechaTurnoOriginal.getTime() - ahora.getTime()) / (1000 * 60 * 60);
+
+  if (horasDiferencia < 24) {
+    throw HttpError.badRequest("Solo se pueden reprogramar turnos con al menos 24 horas de anticipación.");
+  }
+
+  const ocupado = await Turno.findOne({
+    where: {
+      profesionalId: turno.profesionalId,
+      fecha: nuevaFecha,
+      hora: nuevaHora,
+      estado: "confirmado"
+    },
+  });
+
+  if (ocupado) {
+    throw HttpError.conflict("El horario seleccionado ya no se encuentra disponible.");
+  }
+
+  turno.fecha = nuevaFecha;
+  turno.hora = nuevaHora;
+  await turno.save();
+
+  return toPublicTurno(turno);
+}
