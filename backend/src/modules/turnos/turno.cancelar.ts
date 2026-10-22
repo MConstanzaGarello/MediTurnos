@@ -17,12 +17,15 @@ import type { MiTurno } from "./turno.types";
 export const MENSAJE_ERROR_CANCELAR =
   "No fue posible cancelar el turno. Intente nuevamente.";
 
-/** Misma lógica que turno.validator.ts: fecha anterior al día actual. */
+/**
+ * Misma lógica que turno.validator.ts: fecha anterior al día actual, tomando
+ * como "hoy" la fecha de Argentina (UTC-3) y no la de UTC.
+ */
 function isFechaPasada(fecha: string): boolean {
-  const hoy = new Date();
-  hoy.setUTCHours(0, 0, 0, 0);
-  const candidata = new Date(`${fecha}T00:00:00Z`);
-  return candidata.getTime() < hoy.getTime();
+  const hoyAR = new Date(Date.now() - 3 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+  return fecha < hoyAR;
 }
 
 /**

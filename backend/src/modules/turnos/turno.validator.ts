@@ -4,10 +4,12 @@ const FECHA_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const HORA_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 function isFechaPasada(fecha: string): boolean {
-  const hoy = new Date();
-  hoy.setUTCHours(0, 0, 0, 0);
-  const candidata = new Date(`${fecha}T00:00:00Z`);
-  return candidata.getTime() < hoy.getTime();
+  // Fecha de hoy en hora de Argentina (UTC-3), formato YYYY-MM-DD.
+  // Comparar contra UTC rechazaba "hoy" a partir de las 21:00 (hora local).
+  const hoyAR = new Date(Date.now() - 3 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+  return fecha < hoyAR;
 }
 
 /**
