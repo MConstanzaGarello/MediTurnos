@@ -3,6 +3,7 @@ import type {
   PatientRegisterFormData,
   PatientResponse,
 } from "@/lib/types/patient";
+import { getToken } from "@/lib/auth/session";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ??
@@ -15,6 +16,21 @@ export class PatientRegisterError extends Error {
   constructor(status: number, message: string, errors?: ApiErrorResponse["errors"]) {
     super(message);
     this.name = "PatientRegisterError";
+    this.status = status;
+    this.errors = errors;
+  }
+}
+export class PatientProfileRequestError extends Error {
+  status: number;
+  errors?: ApiErrorResponse["errors"];
+
+  constructor(
+    status: number,
+    message: string,
+    errors?: ApiErrorResponse["errors"]
+  ) {
+    super(message);
+    this.name = "PatientProfileRequestError";
     this.status = status;
     this.errors = errors;
   }
@@ -72,4 +88,95 @@ export async function registerPatient(
   }
 
   return body.paciente;
+}
+export async function getPatientProfile(): Promise<PatientResponse> {
+  const token = getToken();
+
+  if (!token) {
+    throw new PatientProfileRequestError(
+      401,
+      "Debe iniciar sesión para continuar."
+    );
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}/api/pacientes/perfil`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    });
+  } catch {
+    throw new PatientProfileRequestError(
+      0,
+      "No fue posible obtener los datos del perfil."
+    );
+  }
+
+  const payload = (await response.json().catch(() => null)) as
+    | { paciente?: PatientResponse; message?: string }
+    | null;
+
+  if (!response.ok || !payload?.paciente) {
+    throw new PatientProfileRequestError(
+      response.status,
+      payload?.message ?? "No fue posible obtener los datos del perfil."
+    );
+  }
+
+  return payload.paciente;
+}
+export async function updatePatientProfile(data: {
+  nombre: string;
+  apellido: string;
+  telefono: string;
+  fechaNacimiento: string;
+}): Promise<PatientResponse> {
+  const token = getToken();
+
+  if (!token) {
+    throw new PatientProfileRequestError(
+      401,
+      "Debe iniciar sesión para continuar."
+    );
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}/api/pacientes/perfil`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+  } catch {
+    throw new PatientProfileRequestError(
+      0,
+      "No fue posible actualizar el perfil."
+    );
+  }
+
+  const payload = (await response.json().catch(() => null)) as
+    | {
+        paciente?: PatientResponse;
+        message?: string;
+        errors?: ApiErrorResponse["errors"];
+      }
+    | null;
+
+  if (!response.ok || !payload?.paciente) {
+    throw new PatientProfileRequestError(
+      response.status,
+      payload?.message ?? "No fue posible actualizar el perfil.",
+      payload?.errors
+    );
+  }
+
+  return payload.paciente;
 }

@@ -16,6 +16,51 @@ function toPublicPatient(paciente: Paciente): PublicPatient {
     createdAt: paciente.createdAt.toISOString(),
   };
 }
+/**
+ * HU-08 — Consultar el perfil del paciente autenticado.
+ * Busca al paciente por el ID obtenido del JWT.
+ */
+export async function getPerfilPaciente(
+  pacienteId: number
+): Promise<PublicPatient> {
+  const paciente = await Paciente.findByPk(pacienteId);
+
+  if (!paciente) {
+    throw HttpError.notFound("No fue posible obtener los datos del perfil.");
+  }
+
+  return toPublicPatient(paciente);
+}
+/**
+ * HU-08 — Actualizar los datos personales del paciente autenticado.
+ * Solo permite modificar nombre, apellido, teléfono y fecha de nacimiento.
+ */
+export interface UpdatePerfilInput {
+  nombre: string;
+  apellido: string;
+  telefono: string;
+  fechaNacimiento: string;
+}
+
+export async function updatePerfilPaciente(
+  pacienteId: number,
+  input: UpdatePerfilInput
+): Promise<PublicPatient> {
+  const paciente = await Paciente.findByPk(pacienteId);
+
+  if (!paciente) {
+    throw HttpError.notFound("No fue posible actualizar el perfil.");
+  }
+
+  paciente.nombre = input.nombre;
+  paciente.apellido = input.apellido;
+  paciente.telefono = input.telefono;
+  paciente.fechaNacimiento = input.fechaNacimiento;
+
+  await paciente.save();
+
+  return toPublicPatient(paciente);
+}
 
 /**
  * Registra un paciente nuevo.

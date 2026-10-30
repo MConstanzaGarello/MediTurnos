@@ -21,7 +21,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Nuevo Turno", href: "/turnos/nuevo" },
   { label: "Mis Turnos", href: "/turnos/mis-turnos" },
   { label: "Historial" }, // HU-07
-  { label: "Mi Perfil" },
+  { label: "Mi Perfil", href: "/perfil" },
 ];
 
 interface PatientShellProps {
