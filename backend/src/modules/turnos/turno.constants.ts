@@ -22,3 +22,16 @@ export const HORARIOS_POSIBLES = [
   "16:00",
   "16:30",
 ];
+
+/**
+ * Estados posibles de un turno (HU-04 los muestra, HU-05 cancela).
+ * Deben coincidir con el CHECK de la migración
+ * 20261012000000-add-estado-to-turnos.
+ */
+export const ESTADOS_TURNO = ["confirmado", "cancelado"] as const;
+
+export type EstadoTurno = (typeof ESTADOS_TURNO)[number];
+
+
+/** Estado de un turno cancelado (HU-05). */
+export const ESTADO_CANCELADO: EstadoTurno = "cancelado";

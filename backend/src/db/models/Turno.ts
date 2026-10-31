@@ -5,11 +5,16 @@ import {
   type ForeignKey,
   type InferAttributes,
   type InferCreationAttributes,
+  type NonAttribute,
 } from "sequelize";
 import { sequelize } from "../../config/database";
 import { Especialidad } from "./Especialidad";
 import { Profesional } from "./Profesional";
 import { Paciente } from "./Paciente";
+import {
+  ESTADOS_TURNO,
+  type EstadoTurno,
+} from "../../modules/turnos/turno.constants";
 
 /**
  * Modelo Turno (HU-03).
@@ -21,9 +26,13 @@ import { Paciente } from "./Paciente";
  * de nuevo el día que exista el login: ahí simplemente se empieza a
  * completar.
  *
- * La restricción UNIQUE (profesional_id, fecha, hora) -ver migración-
- * es lo que garantiza a nivel de base de datos que no se pueda reservar
- * un horario ocupado ni duplicar un turno en el mismo horario.
+ * El índice único parcial (profesional_id, fecha, hora) WHERE estado <>
+ * 'cancelado' -ver migración 20261012000000-add-estado-to-turnos- es lo
+ * que garantiza a nivel de base de datos que no se pueda reservar un
+ * horario ocupado ni duplicar un turno vigente en el mismo horario.
+ *
+ * `estado` (HU-04 / HU-05): "confirmado" por defecto, "cancelado" cuando
+ * el paciente lo cancela.
  */
 export class Turno extends Model<
   InferAttributes<Turno>,
@@ -35,8 +44,14 @@ export class Turno extends Model<
   declare profesionalId: ForeignKey<Profesional["id"]>;
   declare fecha: string;
   declare hora: string;
+  declare estado: CreationOptional<EstadoTurno>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
+
+  // Asociaciones cargadas con `include` (ver db/models/index.ts). Solo
+  // existen cuando la consulta las pide, por ejemplo en "Mis turnos".
+  declare Especialidad?: NonAttribute<Especialidad>;
+  declare Profesional?: NonAttribute<Profesional>;
 }
 
 Turno.init(
@@ -80,6 +95,14 @@ Turno.init(
     hora: {
       type: DataTypes.STRING(5), // formato "HH:MM"
       allowNull: false,
+    },
+    estado: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      defaultValue: "confirmado",
+      validate: {
+        isIn: [ESTADOS_TURNO as unknown as string[]],
+      },
     },
     createdAt: {
       type: DataTypes.DATE,

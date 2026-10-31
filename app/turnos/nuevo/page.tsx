@@ -4,7 +4,7 @@
 // profesionales, disponibilidad de horarios y creación del turno).
 // Ya no usa datos MOCK: todo viene de lib/services/turnoService.ts.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   createTurno,
@@ -18,15 +18,9 @@ import type {
   HorarioDisponibilidad,
   Profesional,
 } from "@/lib/types/turno";
-import { clearSession, getSession, type SessionPatient } from "@/lib/auth/session";
-
-const NAV_ITEMS = [
-  { label: "Inicio", active: false },
-  { label: "Nuevo Turno", active: true },
-  { label: "Mis Turnos", active: false },
-  { label: "Historial", active: false },
-  { label: "Mi Perfil", active: false },
-];
+import { clearSession } from "@/lib/auth/session";
+import { useSessionPatient } from "@/lib/auth/useSessionPatient";
+import { PatientShell } from "@/components/layout/PatientShell";
 
 const DIAS_SEMANA = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sa", "Do"];
 
@@ -62,23 +56,16 @@ function buildWeeks(viewDate: Date): (number | null)[][] {
 
 export default function NuevoTurnoPage() {
   const router = useRouter();
-  const [sessionPatient, setSessionPatient] = useState<SessionPatient | null>(
-    null
-  );
-  const [verificandoSesion, setVerificandoSesion] = useState(true);
+  // `undefined` mientras se hidrata, `null` si no hay sesión (ver
+  // lib/auth/useSessionPatient.ts).
+  const sessionPatient = useSessionPatient();
 
   // HU-03 requiere ser un paciente registrado y logueado. Si no hay
   // sesión guardada (ver lib/auth/session.ts), no tiene sentido mostrar
   // esta pantalla: se redirige al login.
   useEffect(() => {
-    const session = getSession();
-    if (!session) {
-      router.replace("/");
-      return;
-    }
-    setSessionPatient(session.paciente);
-    setVerificandoSesion(false);
-  }, [router]);
+    if (sessionPatient === null) router.replace("/");
+  }, [sessionPatient, router]);
 
   function handleCerrarSesion() {
     clearSession();
@@ -88,12 +75,20 @@ export default function NuevoTurnoPage() {
   const [especialidades, setEspecialidades] = useState<Especialidad[]>([]);
   const [especialidadId, setEspecialidadId] = useState<number | "">("");
 
-  const [profesionales, setProfesionales] = useState<Profesional[]>([]);
+  // Cada lista recuerda para qué selección se cargó: si la selección
+  // cambia, la lista vieja se descarta sola (y se muestra "cargando").
+  const [profData, setProfData] = useState<{
+    especialidadId: number;
+    lista: Profesional[];
+  } | null>(null);
   const [profesionalId, setProfesionalId] = useState<number | "">("");
 
   const [fecha, setFecha] = useState<Date | null>(null);
   const [hora, setHora] = useState("");
-  const [horarios, setHorarios] = useState<HorarioDisponibilidad[]>([]);
+  const [horData, setHorData] = useState<{
+    clave: string;
+    lista: HorarioDisponibilidad[];
+  } | null>(null);
 
   const [viewDate, setViewDate] = useState(() => {
     const t = startOfDay(new Date());
@@ -101,26 +96,35 @@ export default function NuevoTurnoPage() {
   });
 
   const [cargandoEspecialidades, setCargandoEspecialidades] = useState(true);
-  const [cargandoProfesionales, setCargandoProfesionales] = useState(false);
-  const [cargandoHorarios, setCargandoHorarios] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
 
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
   const today = startOfDay(new Date());
-  const weeks = useMemo(() => buildWeeks(viewDate), [viewDate]);
-  const monthLabel = useMemo(() => {
-    const label = viewDate.toLocaleDateString("es-AR", {
-      month: "long",
-      year: "numeric",
-    });
-    return label.charAt(0).toUpperCase() + label.slice(1);
-  }, [viewDate]);
+  const weeks = buildWeeks(viewDate);
+  const monthLabelRaw = viewDate.toLocaleDateString("es-AR", {
+    month: "long",
+    year: "numeric",
+  });
+  const monthLabel =
+    monthLabelRaw.charAt(0).toUpperCase() + monthLabelRaw.slice(1);
 
   const esMesActual =
     viewDate.getFullYear() === today.getFullYear() &&
     viewDate.getMonth() === today.getMonth();
+
+  const profesionalesCargados =
+    profData !== null && profData.especialidadId === especialidadId;
+  const profesionales = profesionalesCargados ? profData.lista : [];
+  const cargandoProfesionales =
+    especialidadId !== "" && !profesionalesCargados;
+
+  const claveHorarios =
+    profesionalId !== "" && fecha ? `${profesionalId}|${toISO(fecha)}` : "";
+  const horariosCargados = horData !== null && horData.clave === claveHorarios;
+  const horarios = horariosCargados ? horData.lista : [];
+  const cargandoHorarios = claveHorarios !== "" && !horariosCargados;
 
   const profesionalInfo = profesionales.find((p) => p.id === profesionalId);
   const especialidadNombre =
@@ -131,7 +135,6 @@ export default function NuevoTurnoPage() {
   // Cargar especialidades al entrar a la pantalla.
   useEffect(() => {
     let cancelado = false;
-    setCargandoEspecialidades(true);
     getEspecialidades()
       .then((data) => {
         if (!cancelado) setEspecialidades(data);
@@ -155,27 +158,21 @@ export default function NuevoTurnoPage() {
 
   // Cargar profesionales cuando cambia la especialidad elegida.
   useEffect(() => {
-    if (especialidadId === "") {
-      setProfesionales([]);
-      return;
-    }
+    if (especialidadId === "") return;
     let cancelado = false;
-    setCargandoProfesionales(true);
     getProfesionales(especialidadId)
       .then((data) => {
-        if (!cancelado) setProfesionales(data);
+        if (!cancelado) setProfData({ especialidadId, lista: data });
       })
       .catch((err) => {
         if (!cancelado) {
+          setProfData({ especialidadId, lista: [] });
           setErrorMsg(
             err instanceof TurnoRequestError
               ? err.message
               : "No se pudo cargar el listado de profesionales."
           );
         }
-      })
-      .finally(() => {
-        if (!cancelado) setCargandoProfesionales(false);
       });
     return () => {
       cancelado = true;
@@ -184,27 +181,22 @@ export default function NuevoTurnoPage() {
 
   // Cargar disponibilidad de horarios cuando hay profesional + fecha.
   useEffect(() => {
-    if (profesionalId === "" || !fecha) {
-      setHorarios([]);
-      return;
-    }
+    if (profesionalId === "" || !fecha) return;
+    const clave = `${profesionalId}|${toISO(fecha)}`;
     let cancelado = false;
-    setCargandoHorarios(true);
     getHorariosDisponibilidad(profesionalId, toISO(fecha))
       .then((data) => {
-        if (!cancelado) setHorarios(data);
+        if (!cancelado) setHorData({ clave, lista: data });
       })
       .catch((err) => {
         if (!cancelado) {
+          setHorData({ clave, lista: [] });
           setErrorMsg(
             err instanceof TurnoRequestError
               ? err.message
               : "No se pudo obtener la disponibilidad de horarios."
           );
         }
-      })
-      .finally(() => {
-        if (!cancelado) setCargandoHorarios(false);
       });
     return () => {
       cancelado = true;
@@ -292,7 +284,7 @@ export default function NuevoTurnoPage() {
         // Si el horario ya no está disponible, refrescamos la grilla.
         if (err.status === 409 && fecha && profesionalId) {
           getHorariosDisponibilidad(profesionalId, toISO(fecha))
-            .then(setHorarios)
+            .then((lista) => setHorData({ clave: claveHorarios, lista }))
             .catch(() => {});
         }
       } else {
@@ -303,7 +295,7 @@ export default function NuevoTurnoPage() {
     }
   }
 
-  if (verificandoSesion || !sessionPatient) {
+  if (!sessionPatient) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <p className="text-slate-500 text-sm">Verificando sesión...</p>
@@ -312,73 +304,7 @@ export default function NuevoTurnoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex">
-      {/* Sidebar */}
-      <aside className="w-60 shrink-0 border-r border-slate-800 bg-slate-900/40 flex flex-col">
-        <div className="h-16 flex items-center gap-2 px-5 border-b border-slate-800">
-          <span className="w-7 h-7 rounded-full bg-cyan-500 flex items-center justify-center text-slate-950">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-4 h-4"
-            >
-              <path d="M11 2v2" />
-              <path d="M5 2v2" />
-              <path d="M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1" />
-              <path d="M8 15a6 6 0 0 0 12 0v-3" />
-              <circle cx="20" cy="10" r="2" />
-            </svg>
-          </span>
-          <span className="text-white font-semibold tracking-wide text-sm">
-            MEDITURNOS
-          </span>
-        </div>
-
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          {NAV_ITEMS.map((item) => (
-            <div
-              key={item.label}
-              className={
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm cursor-default " +
-                (item.active
-                  ? "bg-cyan-500 text-slate-950 font-semibold"
-                  : "text-slate-300 hover:bg-slate-800")
-              }
-            >
-              <span
-                className={
-                  "w-1.5 h-1.5 rounded-full " +
-                  (item.active ? "bg-slate-950" : "bg-slate-600")
-                }
-              />
-              {item.label}
-            </div>
-          ))}
-        </nav>
-      </aside>
-
-      {/* Columna principal */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Topbar */}
-        <header className="h-16 border-b border-slate-800 flex items-center justify-end px-8 gap-4">
-          <span className="text-slate-400 text-lg">🔔</span>
-          <span className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 text-sm">
-            👤
-          </span>
-          <span className="text-slate-300 text-sm">{sessionPatient.nombre}</span>
-          <button
-            type="button"
-            onClick={handleCerrarSesion}
-            className="text-slate-500 hover:text-red-400 text-xs transition"
-          >
-            Salir
-          </button>
-        </header>
-
+    <PatientShell paciente={sessionPatient} onCerrarSesion={handleCerrarSesion}>
         <main className="flex-1 px-8 py-8">
           <h1 className="text-2xl font-bold text-white">
             Solicitar Nuevo Turno
@@ -641,7 +567,6 @@ export default function NuevoTurnoPage() {
             </div>
           </div>
         </main>
-      </div>
-    </div>
+    </PatientShell>
   );
 }

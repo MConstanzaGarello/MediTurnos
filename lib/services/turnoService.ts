@@ -2,12 +2,14 @@ import type {
   ApiErrorResponse,
   Especialidad,
   HorarioDisponibilidad,
+  MiTurno,
   Profesional,
   TurnoCreateErrors,
   TurnoCreatePayload,
   TurnoResponse,
 } from "@/lib/types/turno";
 import { getToken } from "@/lib/auth/session";
+import { MENSAJE_ERROR_TURNOS } from "@/lib/turnos/misTurnos";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ??
@@ -168,4 +170,148 @@ export async function createTurno(
   }
 
   return body.turno;
+}
+
+/**
+ * HU-04 — Consultar mis turnos.
+ *
+ * Pide al backend los turnos del paciente logueado, autenticado con el
+ * JWT de la sesión. El backend saca el paciente del token, así que acá no
+ * se manda ningún id.
+ *
+ * - Sin sesión -> TurnoRequestError 401 (la pantalla redirige al login).
+ * - Error de red o del servidor -> TurnoRequestError con el mensaje del
+ *   criterio de aceptación: "No fue posible obtener los turnos."
+ * - Sin turnos -> lista vacía (la pantalla muestra "No posee turnos
+ *   programados.").
+ */
+export async function getMisTurnos(): Promise<MiTurno[]> {
+  const token = getToken();
+  if (!token) {
+    throw new TurnoRequestError(401, "Debe iniciar sesión para continuar.");
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/turnos/mis-turnos`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    });
+  } catch {
+    throw new TurnoRequestError(0, MENSAJE_ERROR_TURNOS);
+  }
+
+  const payload = await parseJsonSafe(response);
+
+  if (!response.ok) {
+    const body = (payload ?? {}) as Partial<ApiErrorResponse>;
+    throw new TurnoRequestError(
+      response.status,
+      response.status === 401
+        ? body.message ?? "Debe iniciar sesión para continuar."
+        : MENSAJE_ERROR_TURNOS
+    );
+  }
+
+  const body = (payload ?? {}) as { turnos?: MiTurno[] };
+  if (!Array.isArray(body.turnos)) {
+    throw new TurnoRequestError(response.status, MENSAJE_ERROR_TURNOS);
+  }
+
+  return body.turnos;
+}
+
+
+/**
+ * HU-05 — Cancelar un turno propio.
+ * Envía la solicitud autenticada al backend.
+ */
+export async function cancelarTurno(
+  turnoId: number
+): Promise<void> {
+  const token = getToken();
+
+  if (!token) {
+    throw new TurnoRequestError(
+      401,
+      "Debe iniciar sesión para continuar."
+    );
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(
+      `${API_BASE_URL}/api/turnos/${turnoId}/cancelar`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+  } catch {
+    throw new TurnoRequestError(
+      0,
+      "No fue posible cancelar el turno. Intente nuevamente."
+    );
+  }
+
+  const payload = await parseJsonSafe(response);
+
+  if (!response.ok) {
+    const body = (payload ?? {}) as Partial<ApiErrorResponse>;
+
+    throw new TurnoRequestError(
+      response.status,
+      body.message ??
+        "No fue posible cancelar el turno. Intente nuevamente."
+    );
+  }
+}
+
+/**
+ * HU-06 — Reprogramar turno.
+ *
+ * Cambia fecha y hora de un turno propio confirmado. El paciente sale del
+ * JWT; el backend valida pertenencia, 24 h de anticipación y que el nuevo
+ * horario esté libre.
+ */
+export async function reprogramarTurno(
+  turnoId: number,
+  fecha: string,
+  hora: string
+): Promise<void> {
+  const token = getToken();
+  if (!token) {
+    throw new TurnoRequestError(401, "Debe iniciar sesión para continuar.");
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/turnos/${turnoId}/reprogramar`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ fecha, hora }),
+    });
+  } catch {
+    throw new TurnoRequestError(
+      0,
+      "No fue posible reprogramar el turno. Intente nuevamente."
+    );
+  }
+
+  if (!response.ok) {
+    const payload = await parseJsonSafe(response);
+    const body = (payload ?? {}) as Partial<ApiErrorResponse>;
+    throw new TurnoRequestError(
+      response.status,
+      body.message ?? "No fue posible reprogramar el turno. Intente nuevamente."
+    );
+  }
 }

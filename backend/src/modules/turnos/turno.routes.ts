@@ -2,8 +2,11 @@ import { Router } from "express";
 import {
   createTurnoHandler,
   getHorariosDisponibilidadHandler,
+  getMisTurnosHandler,
+  reprogramarTurnoHandler,
 } from "./turno.controller";
 import { requireAuth } from "../../middlewares/requireAuth";
+import { cancelTurnoHandler } from "./turno.cancelar";
 
 export const turnoRouter = Router();
 
@@ -11,5 +14,15 @@ export const turnoRouter = Router();
 // falta estar logueado para mirar disponibilidad).
 turnoRouter.get("/horarios-disponibles", getHorariosDisponibilidadHandler);
 
+// HU-04: turnos del paciente logueado. Requiere sesión: el paciente sale
+// del JWT, así que cada uno ve únicamente los suyos.
+turnoRouter.get("/mis-turnos", requireAuth, getMisTurnosHandler);
+
 // Pedir un turno sí requiere sesión: el paciente sale del JWT, no del body.
 turnoRouter.post("/", requireAuth, createTurnoHandler);
+
+// HU-05: cancelar un turno propio (también requiere sesión).
+turnoRouter.patch("/:id/cancelar", requireAuth, cancelTurnoHandler);
+
+// HU-06: reprogramar un turno propio (el paciente sale del JWT).
+turnoRouter.put("/:id/reprogramar", requireAuth, reprogramarTurnoHandler);
