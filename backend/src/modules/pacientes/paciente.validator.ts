@@ -147,6 +147,7 @@ export function validatePatientRegisterInput(payload: unknown): {
 export interface PatientProfileUpdateErrors {
   nombre?: string;
   apellido?: string;
+  email?: string;
   telefono?: string;
   fechaNacimiento?: string;
 }
@@ -156,6 +157,7 @@ export function validatePatientProfileUpdateInput(payload: unknown): {
   data: {
     nombre: string;
     apellido: string;
+    email: string;
     telefono: string;
     fechaNacimiento: string;
   } | null;
@@ -168,13 +170,15 @@ export function validatePatientProfileUpdateInput(payload: unknown): {
   >;
 
   const data = {
-    nombre: typeof body.nombre === "string" ? body.nombre.trim() : "",
-    apellido: typeof body.apellido === "string" ? body.apellido.trim() : "",
-    telefono: typeof body.telefono === "string" ? body.telefono.trim() : "",
-    fechaNacimiento:
-      typeof body.fechaNacimiento === "string"
-        ? body.fechaNacimiento.trim()
-        : "",
+  nombre: typeof body.nombre === "string" ? body.nombre.trim() : "",
+  apellido: typeof body.apellido === "string" ? body.apellido.trim() : "",
+  email:
+    typeof body.email === "string" ? body.email.trim().toLowerCase() : "",
+  telefono: typeof body.telefono === "string" ? body.telefono.trim() : "",
+  fechaNacimiento:
+    typeof body.fechaNacimiento === "string"
+      ? body.fechaNacimiento.trim()
+      : "",
   };
 
   if (!data.nombre) {
@@ -188,7 +192,12 @@ export function validatePatientProfileUpdateInput(payload: unknown): {
   } else if (!isNameValid(data.apellido)) {
     errors.apellido = "Ingrese un apellido válido.";
   }
-
+  if (!data.email) {
+  errors.email = "Este campo es obligatorio.";
+  } else if (!EMAIL_REGEX.test(data.email)) {
+  errors.email = "Ingrese un correo electrónico válido.";
+  }
+  
   if (!data.telefono) {
     errors.telefono = "Este campo es obligatorio.";
   } else if (!isPhoneValid(data.telefono)) {

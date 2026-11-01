@@ -39,6 +39,7 @@ export interface UpdatePerfilInput {
   nombre: string;
   apellido: string;
   telefono: string;
+  email: string;
   fechaNacimiento: string;
 }
 
@@ -49,15 +50,39 @@ export async function updatePerfilPaciente(
   const paciente = await Paciente.findByPk(pacienteId);
 
   if (!paciente) {
-    throw HttpError.notFound("No fue posible actualizar el perfil.");
+    throw HttpError.notFound("Paciente no encontrado.");
+  }
+
+  const emailExistente = await Paciente.findOne({
+    where: {
+      email: input.email.toLowerCase(),
+      id: { [Op.ne]: pacienteId },
+    },
+  });
+
+  if (emailExistente) {
+    throw HttpError.conflict("Este correo ya se encuentra registrado.", {
+      email: "Este correo ya se encuentra registrado.",
+    });
   }
 
   paciente.nombre = input.nombre;
   paciente.apellido = input.apellido;
+  paciente.email = input.email.toLowerCase();
   paciente.telefono = input.telefono;
   paciente.fechaNacimiento = input.fechaNacimiento;
 
-  await paciente.save();
+  try {
+    await paciente.save();
+  } catch (error) {
+    if (error instanceof UniqueConstraintError) {
+      throw HttpError.conflict("Este correo ya se encuentra registrado.", {
+        email: "Este correo ya se encuentra registrado.",
+      });
+    }
+
+    throw error;
+  }
 
   return toPublicPatient(paciente);
 }

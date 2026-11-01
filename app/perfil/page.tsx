@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PatientShell } from "@/components/layout/PatientShell";
-import { clearSession } from "@/lib/auth/session";
+import { clearSession, updateSessionPatient } from "@/lib/auth/session";
 import { useSessionPatient } from "@/lib/auth/useSessionPatient";
 import {
   getPatientProfile,
@@ -16,6 +16,7 @@ import type { PatientResponse } from "@/lib/types/patient";
 interface ProfileForm {
   nombre: string;
   apellido: string;
+  email: string;
   telefono: string;
   fechaNacimiento: string;
 }
@@ -28,6 +29,7 @@ export default function PerfilPage() {
   const [formulario, setFormulario] = useState<ProfileForm>({
     nombre: "",
     apellido: "",
+    email: "",
     telefono: "",
     fechaNacimiento: "",
   });
@@ -61,6 +63,7 @@ export default function PerfilPage() {
         setFormulario({
           nombre: data.nombre,
           apellido: data.apellido,
+          email: data.email,
           telefono: data.telefono,
           fechaNacimiento: data.fechaNacimiento.slice(0, 10),
         });
@@ -112,11 +115,18 @@ export default function PerfilPage() {
 
     try {
       const pacienteActualizado = await updatePatientProfile(formulario);
+      updateSessionPatient({
+  id: pacienteActualizado.id,
+  nombre: pacienteActualizado.nombre,
+  apellido: pacienteActualizado.apellido,
+  email: pacienteActualizado.email,
+});
 
       setPerfil(pacienteActualizado);
       setFormulario({
         nombre: pacienteActualizado.nombre,
         apellido: pacienteActualizado.apellido,
+        email: pacienteActualizado.email,
         telefono: pacienteActualizado.telefono,
         fechaNacimiento: pacienteActualizado.fechaNacimiento.slice(0, 10),
       });
@@ -238,10 +248,16 @@ export default function PerfilPage() {
                   </label>
                   <input
                     type="email"
-                    value={perfil.email}
-                    readOnly
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-slate-500 cursor-not-allowed"
+                    value={formulario.email}
+                    onChange={(e) => cambiarCampo("email", e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white outline-none focus:border-cyan-500"
+                    required
                   />
+                  {errores.email && (
+                    <p className="text-red-400 text-xs mt-1">
+                      {errores.email}
+                    </p>
+                  )}
                 </div>
 
                 <div>

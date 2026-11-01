@@ -1,3 +1,4 @@
+
 import type {
   ApiErrorResponse,
   PatientRegisterFormData,
@@ -13,13 +14,18 @@ export class PatientRegisterError extends Error {
   status: number;
   errors?: ApiErrorResponse["errors"];
 
-  constructor(status: number, message: string, errors?: ApiErrorResponse["errors"]) {
+  constructor(
+    status: number,
+    message: string,
+    errors?: ApiErrorResponse["errors"]
+  ) {
     super(message);
     this.name = "PatientRegisterError";
     this.status = status;
     this.errors = errors;
   }
 }
+
 export class PatientProfileRequestError extends Error {
   status: number;
   errors?: ApiErrorResponse["errors"];
@@ -38,9 +44,6 @@ export class PatientProfileRequestError extends Error {
 
 /**
  * Envía el formulario de registro al backend real.
- * Lanza `PatientRegisterError` con el status HTTP y, si el backend lo
- * proporciona, el detalle de errores por campo (400) o el mensaje de
- * conflicto (409 por DNI/email duplicado).
  */
 export async function registerPatient(
   data: PatientRegisterFormData
@@ -63,6 +66,7 @@ export async function registerPatient(
   }
 
   let payload: unknown = null;
+
   try {
     payload = await response.json();
   } catch {
@@ -71,6 +75,7 @@ export async function registerPatient(
 
   if (!response.ok) {
     const body = (payload ?? {}) as Partial<ApiErrorResponse>;
+
     throw new PatientRegisterError(
       response.status,
       body.message ??
@@ -80,6 +85,7 @@ export async function registerPatient(
   }
 
   const body = (payload ?? {}) as { paciente?: PatientResponse };
+
   if (!body.paciente) {
     throw new PatientRegisterError(
       response.status,
@@ -89,6 +95,7 @@ export async function registerPatient(
 
   return body.paciente;
 }
+
 export async function getPatientProfile(): Promise<PatientResponse> {
   const token = getToken();
 
@@ -129,9 +136,11 @@ export async function getPatientProfile(): Promise<PatientResponse> {
 
   return payload.paciente;
 }
+
 export async function updatePatientProfile(data: {
   nombre: string;
   apellido: string;
+  email: string;
   telefono: string;
   fechaNacimiento: string;
 }): Promise<PatientResponse> {
