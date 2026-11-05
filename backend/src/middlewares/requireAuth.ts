@@ -21,6 +21,11 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
 
   try {
     const payload = verifySessionToken(token);
+    // Un token de administrador o médico no sirve para las rutas de
+    // paciente (HU-11): sin pacienteId no hay a quién atribuirle el turno.
+    if (typeof payload.pacienteId !== "number" || (payload.rol && payload.rol !== "paciente")) {
+      return next(HttpError.unauthorized("Debe iniciar sesión como paciente para continuar."));
+    }
     req.pacienteId = payload.pacienteId;
     next();
   } catch {

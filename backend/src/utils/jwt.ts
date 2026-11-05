@@ -1,8 +1,17 @@
 import jwt, { type SignOptions } from "jsonwebtoken";
 import { env } from "../config/env";
 
+/**
+ * Rol de la sesión (HU-11). Los tokens anteriores a HU-11 no traen `rol`:
+ * se consideran de paciente.
+ */
+export type RolSesion = "paciente" | "admin" | "medico";
+
 export interface SessionTokenPayload {
-  pacienteId: number;
+  rol?: RolSesion;
+  pacienteId?: number;
+  adminId?: number;
+  profesionalId?: number;
   email: string;
 }
 

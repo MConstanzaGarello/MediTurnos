@@ -27,6 +27,10 @@ export class HttpError extends Error {
     return new HttpError(401, message, errors);
   }
 
+  static forbidden(message: string, errors?: HttpErrorFields) {
+    return new HttpError(403, message, errors);
+  }
+
   static notFound(message: string, errors?: HttpErrorFields) {
     return new HttpError(404, message, errors);
   }
