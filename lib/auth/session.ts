@@ -6,9 +6,14 @@ export interface SessionPatient {
   email: string;
 }
 
+/** Rol de la sesión (HU-11). Las sesiones guardadas antes de HU-11 no lo traen: son de paciente. */
+export type RolSesion = "paciente" | "admin" | "medico";
+
 interface StoredSession {
   token: string;
+  /** Datos del usuario logueado (paciente o administrador). */
   paciente: SessionPatient;
+  rol?: RolSesion;
 }
 
 export const STORAGE_KEY = "mediturnos_session";
@@ -16,11 +21,12 @@ export const SESSION_CHANGE_EVENT = "mediturnos-session-change";
 
 export function saveSession(
   token: string,
-  paciente: SessionPatient
+  paciente: SessionPatient,
+  rol: RolSesion = "paciente"
 ): void {
   if (typeof window === "undefined") return;
 
-  const data: StoredSession = { token, paciente };
+  const data: StoredSession = { token, paciente, rol };
 
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   window.dispatchEvent(new Event(SESSION_CHANGE_EVENT));
@@ -49,7 +55,7 @@ export function updateSessionPatient(paciente: SessionPatient): void {
 
   if (!session) return;
 
-  saveSession(session.token, paciente);
+  saveSession(session.token, paciente, session.rol ?? "paciente");
 }
 
 export function clearSession(): void {

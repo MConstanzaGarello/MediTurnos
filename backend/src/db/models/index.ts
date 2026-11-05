@@ -3,6 +3,8 @@ import { Paciente } from "./Paciente";
 import { Especialidad } from "./Especialidad";
 import { Profesional } from "./Profesional";
 import { Turno } from "./Turno";
+import { Administrador } from "./Administrador";
+import { ObraSocial } from "./ObraSocial";
 
 // Asociaciones (HU-03)
 Especialidad.hasMany(Profesional, { foreignKey: "especialidadId" });
@@ -17,7 +19,29 @@ Turno.belongsTo(Profesional, { foreignKey: "profesionalId" });
 Paciente.hasMany(Turno, { foreignKey: "pacienteId" });
 Turno.belongsTo(Paciente, { foreignKey: "pacienteId" });
 
-export { sequelize, Paciente, Especialidad, Profesional, Turno };
+// Asociaciones (HU-11): un profesional atiende varias obras sociales.
+Profesional.belongsToMany(ObraSocial, {
+  through: "profesional_obras_sociales",
+  foreignKey: "profesional_id",
+  otherKey: "obra_social_id",
+  timestamps: false,
+});
+ObraSocial.belongsToMany(Profesional, {
+  through: "profesional_obras_sociales",
+  foreignKey: "obra_social_id",
+  otherKey: "profesional_id",
+  timestamps: false,
+});
+
+export {
+  sequelize,
+  Paciente,
+  Especialidad,
+  Profesional,
+  Turno,
+  Administrador,
+  ObraSocial,
+};
 
 /**
  * Verifica la conexión a PostgreSQL. Se llama al arrancar el servidor

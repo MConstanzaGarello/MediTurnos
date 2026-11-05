@@ -3,11 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import RegisterForm from "@/components/patient/RegisterForm";
-import {
-  loginPatient,
-  LoginError,
-  type AuthenticatedPatient,
-} from "@/lib/services/authService";
+import { loginUser, LoginError } from "@/lib/services/authService";
 import { saveSession } from "@/lib/auth/session";
 
 export default function Home() {
@@ -29,8 +25,7 @@ export default function Home() {
   const [loginSubmitError, setLoginSubmitError] = useState<string | null>(
     null
   );
-  const [loggedInPatient, setLoggedInPatient] =
-    useState<AuthenticatedPatient | null>(null);
+  const [loggedInName, setLoggedInName] = useState<string | null>(null);
 
   const handleLoginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -72,18 +67,23 @@ export default function Home() {
 
     setIsLoggingIn(true);
     try {
-      const { paciente, token } = await loginPatient(
+      const { rol, token, usuario } = await loginUser(
         loginForm.email,
         loginForm.password
       );
-      saveSession(token, {
-        id: paciente.id,
-        nombre: paciente.nombre,
-        apellido: paciente.apellido,
-        email: paciente.email,
-      });
-      setLoggedInPatient(paciente);
-      router.push("/turnos/nuevo");
+
+      // HU-11: el panel del médico todavía no está disponible (HU-09).
+      if (rol === "medico") {
+        setLoginSubmitError(
+          "El acceso para médicos todavía no está disponible en esta versión."
+        );
+        return;
+      }
+
+      saveSession(token, usuario, rol);
+      setLoggedInName(usuario.nombre);
+      // HU-11: el administrador va a su dashboard; el paciente a pedir turno.
+      router.push(rol === "admin" ? "/admin" : "/turnos/nuevo");
     } catch (error) {
       if (error instanceof LoginError) {
         setLoginSubmitError(error.message);
@@ -133,13 +133,13 @@ export default function Home() {
           </div>
 
           {activeTab === "login" ? (
-            loggedInPatient ? (
+            loggedInName ? (
               <div className="text-center" role="status">
                 <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400 text-2xl">
                   ✓
                 </div>
                 <h2 className="text-2xl font-semibold text-white mb-2">
-                  ¡Bienvenido/a, {loggedInPatient.nombre}!
+                  ¡Bienvenido/a, {loggedInName}!
                 </h2>
                 <p className="text-slate-400 text-sm">
                   Iniciaste sesión correctamente.

@@ -7,6 +7,8 @@ declare global {
   namespace Express {
     interface Request {
       pacienteId?: number;
+      /** HU-11: lo carga requireAdmin. */
+      adminId?: number;
     }
   }
 }
