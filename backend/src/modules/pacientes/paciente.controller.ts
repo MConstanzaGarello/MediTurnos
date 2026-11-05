@@ -1,6 +1,13 @@
 import type { NextFunction, Request, Response } from "express";
-import { validatePatientRegisterInput } from "./paciente.validator";
-import { registerPatient } from "./paciente.service";
+import {
+  validatePatientRegisterInput,
+  validatePatientProfileUpdateInput,
+} from "./paciente.validator";
+import {
+  registerPatient,
+  getPerfilPaciente,
+  updatePerfilPaciente,
+} from "./paciente.service";
 import { HttpError } from "../../utils/httpError";
 
 /**
@@ -27,6 +34,61 @@ export async function registerPatientHandler(
     const paciente = await registerPatient(data);
     res.status(201).json({
       message: "Paciente registrado correctamente.",
+      paciente,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+/**
+ * HU-08 — GET /api/pacientes/perfil
+ * Consulta los datos del paciente autenticado.
+ */
+export async function getPerfilPacienteHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    if (req.pacienteId === undefined) {
+      throw HttpError.unauthorized("Debe iniciar sesión para continuar.");
+    }
+
+    const paciente = await getPerfilPaciente(req.pacienteId);
+
+    res.status(200).json({ paciente });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * HU-08 — PUT /api/pacientes/perfil
+ * Actualiza los datos personales del paciente autenticado.
+ */
+export async function updatePerfilPacienteHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    if (req.pacienteId === undefined) {
+      throw HttpError.unauthorized("Debe iniciar sesión para continuar.");
+    }
+
+    const { errors, data } = validatePatientProfileUpdateInput(req.body);
+
+    if (Object.keys(errors).length > 0 || !data) {
+      throw HttpError.badRequest(
+  "Datos inválidos.",
+  errors as Partial<Record<string, string>>
+);
+    }
+
+    const paciente = await updatePerfilPaciente(req.pacienteId, data);
+
+    res.status(200).json({
+      message: "Perfil actualizado correctamente.",
       paciente,
     });
   } catch (error) {

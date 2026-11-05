@@ -140,3 +140,79 @@ export function validatePatientRegisterInput(payload: unknown): {
 
   return { errors, data };
 }
+/**
+ * HU-08 — Validaciones para actualizar el perfil del paciente.
+ */
+
+export interface PatientProfileUpdateErrors {
+  nombre?: string;
+  apellido?: string;
+  email?: string;
+  telefono?: string;
+  fechaNacimiento?: string;
+}
+
+export function validatePatientProfileUpdateInput(payload: unknown): {
+  errors: PatientProfileUpdateErrors;
+  data: {
+    nombre: string;
+    apellido: string;
+    email: string;
+    telefono: string;
+    fechaNacimiento: string;
+  } | null;
+} {
+  const errors: PatientProfileUpdateErrors = {};
+
+  const body = (payload && typeof payload === "object" ? payload : {}) as Record<
+    string,
+    unknown
+  >;
+
+  const data = {
+  nombre: typeof body.nombre === "string" ? body.nombre.trim() : "",
+  apellido: typeof body.apellido === "string" ? body.apellido.trim() : "",
+  email:
+    typeof body.email === "string" ? body.email.trim().toLowerCase() : "",
+  telefono: typeof body.telefono === "string" ? body.telefono.trim() : "",
+  fechaNacimiento:
+    typeof body.fechaNacimiento === "string"
+      ? body.fechaNacimiento.trim()
+      : "",
+  };
+
+  if (!data.nombre) {
+    errors.nombre = "Este campo es obligatorio.";
+  } else if (!isNameValid(data.nombre)) {
+    errors.nombre = "Ingrese un nombre válido.";
+  }
+
+  if (!data.apellido) {
+    errors.apellido = "Este campo es obligatorio.";
+  } else if (!isNameValid(data.apellido)) {
+    errors.apellido = "Ingrese un apellido válido.";
+  }
+  if (!data.email) {
+  errors.email = "Este campo es obligatorio.";
+  } else if (!EMAIL_REGEX.test(data.email)) {
+  errors.email = "Ingrese un correo electrónico válido.";
+  }
+  
+  if (!data.telefono) {
+    errors.telefono = "Este campo es obligatorio.";
+  } else if (!isPhoneValid(data.telefono)) {
+    errors.telefono = "Ingrese un teléfono válido.";
+  }
+
+  if (!data.fechaNacimiento) {
+    errors.fechaNacimiento = "Este campo es obligatorio.";
+  } else if (!isBirthDateValid(data.fechaNacimiento)) {
+    errors.fechaNacimiento = "Ingrese una fecha de nacimiento válida.";
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return { errors, data: null };
+  }
+
+  return { errors, data };
+}
