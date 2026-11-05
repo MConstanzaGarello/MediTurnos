@@ -20,7 +20,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Inicio" },
   { label: "Nuevo Turno", href: "/turnos/nuevo" },
   { label: "Mis Turnos", href: "/turnos/mis-turnos" },
-  { label: "Historial" }, // HU-07
+  { label: "Historial", href: "/turnos/historial" }, // HU-07
   { label: "Mi Perfil" },
 ];
 
