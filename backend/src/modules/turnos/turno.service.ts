@@ -1,7 +1,11 @@
-import { UniqueConstraintError } from "sequelize";
+import { Op, UniqueConstraintError } from "sequelize";
 import { Especialidad, Profesional, Turno } from "../../db/models";
 import { HttpError } from "../../utils/httpError";
-import { HORARIOS_POSIBLES } from "./turno.constants";
+import {
+  ESTADO_CANCELADO,
+  ESTADOS_VIGENTES,
+  HORARIOS_POSIBLES,
+} from "./turno.constants";
 import type {
   HorarioDisponibilidad,
   MiTurno,
@@ -31,7 +35,7 @@ export async function getHorariosDisponibilidad(
   fecha: string
 ): Promise<HorarioDisponibilidad[]> {
   const turnosDelDia = await Turno.findAll({
-    where: { profesionalId, fecha },
+    where: { profesionalId, fecha, estado: { [Op.ne]: ESTADO_CANCELADO } },
   });
   const ocupados = new Set(turnosDelDia.map((t) => t.hora));
 
@@ -59,6 +63,7 @@ export async function createTurno(
       profesionalId: input.profesionalId,
       fecha: input.fecha,
       hora: input.hora,
+      estado: { [Op.ne]: ESTADO_CANCELADO },
     },
   });
 
@@ -131,6 +136,9 @@ export async function getTurnosDelPaciente(pacienteId: number): Promise<MiTurno[
   return turnos.map(toMiTurno);
 }
 
+/**
+ * HU-06 — Reprogramar turno.
+ */
 export async function reprogramarTurno(
   turnoId: number,
   pacienteId: number,
@@ -143,7 +151,7 @@ export async function reprogramarTurno(
     throw HttpError.notFound("El turno no existe o no te pertenece.");
   }
 
-  if (turno.estado !== "confirmado") {
+  if (!ESTADOS_VIGENTES.includes(turno.estado)) {
     throw HttpError.badRequest("Solo se pueden reprogramar turnos confirmados.");
   }
 
@@ -160,7 +168,7 @@ export async function reprogramarTurno(
       profesionalId: turno.profesionalId,
       fecha: nuevaFecha,
       hora: nuevaHora,
-      estado: "confirmado"
+      estado: { [Op.ne]: ESTADO_CANCELADO },
     },
   });
 

@@ -24,10 +24,38 @@ export const HORARIOS_POSIBLES = [
 ];
 
 /**
- * Estados posibles de un turno (HU-04 los muestra, HU-05 cancela).
+ * Estados posibles de un turno (HU-04 los muestra, HU-05 cancela, el
+ * Portal del Médico marca "atendido"/"pendiente").
  * Deben coincidir con el CHECK de la migración
- * 20261012000000-add-estado-to-turnos.
+ * 20261101000002-extend-estado-turnos-check.
  */
-export const ESTADOS_TURNO = ["confirmado", "cancelado"] as const;
+export const ESTADOS_TURNO = [
+  "confirmado",
+  "cancelado",
+  "atendido",
+  "pendiente",
+] as const;
 
 export type EstadoTurno = (typeof ESTADOS_TURNO)[number];
+
+/** Estados que el médico puede asignar con PATCH /api/turnos/:id/estado. */
+export const ESTADOS_ASIGNABLES_POR_MEDICO = ["atendido", "pendiente"] as const;
+
+export type EstadoAsignablePorMedico =
+  (typeof ESTADOS_ASIGNABLES_POR_MEDICO)[number];
+
+/**
+ * Estados de un turno que todavía puede gestionar el paciente (cancelar o
+ * reprogramar): no está cancelado ni ya atendido.
+ */
+export const ESTADOS_VIGENTES: readonly EstadoTurno[] = [
+  "confirmado",
+  "pendiente",
+];
+
+
+/** Estado de un turno cancelado (HU-05). */
+export const ESTADO_CANCELADO: EstadoTurno = "cancelado";
+
+/** Estado de un turno ya atendido por el médico. */
+export const ESTADO_ATENDIDO: EstadoTurno = "atendido";

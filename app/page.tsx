@@ -1,18 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import RegisterForm from "@/components/patient/RegisterForm";
 import {
-  loginPatient,
+  login,
   LoginError,
   type AuthenticatedPatient,
 } from "@/lib/services/authService";
 import { saveSession } from "@/lib/auth/session";
+import { saveMedicoSession } from "@/lib/auth/medicoSession";
+import { useSessionMedico } from "@/lib/auth/useSessionMedico";
 
 export default function Home() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"login" | "registro">("login");
+
+  // Si ya hay una sesión de médico abierta, lo lleva directo a su vista.
+  const sessionMedico = useSessionMedico();
+  useEffect(() => {
+    if (sessionMedico) {
+      router.replace("/medico/inicio");
+    }
+  }, [sessionMedico, router]);
 
   // --- HU-02: Inicio de sesión ---
   const [loginForm, setLoginForm] = useState({
@@ -72,10 +82,21 @@ export default function Home() {
 
     setIsLoggingIn(true);
     try {
-      const { paciente, token } = await loginPatient(
-        loginForm.email,
-        loginForm.password
-      );
+      const resultado = await login(loginForm.email, loginForm.password);
+
+      // Mismo login para todos: el rol decide a qué vista va cada uno.
+      if (resultado.rol === "medico") {
+        saveMedicoSession(resultado.token, {
+          id: resultado.medico.id,
+          nombre: resultado.medico.nombre,
+          email: resultado.medico.email,
+          especialidad: resultado.medico.especialidad,
+        });
+        router.push("/medico/inicio");
+        return;
+      }
+
+      const { paciente, token } = resultado;
       saveSession(token, {
         id: paciente.id,
         nombre: paciente.nombre,
@@ -152,7 +173,7 @@ export default function Home() {
                 </h2>
 
                 <p className="text-slate-400 text-sm mb-6">
-                  Ingresá con tu correo y contraseña para gestionar tus turnos.
+                  Ingresá con tu correo y contraseña.
                 </p>
 
                 <form

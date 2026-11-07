@@ -7,7 +7,6 @@ import { HttpError } from "../utils/httpError";
  * - Cualquier otro error -> 500 genérico, sin exponer detalles internos
  *   (stack traces, mensajes de PostgreSQL, etc.) al cliente.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function errorHandler(
   err: unknown,
   req: Request,

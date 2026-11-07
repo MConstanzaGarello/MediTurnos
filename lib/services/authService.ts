@@ -1,3 +1,5 @@
+import type { AuthenticatedMedico } from "@/lib/types/medico";
+
 export interface AuthenticatedPatient {
   id: number;
   nombre: string;
@@ -24,17 +26,23 @@ export class LoginError extends Error {
 }
 
 /**
- * HU-02: envía el login al backend real.
+ * Login ÚNICO de pacientes y médicos (HU-02 + Portal del Médico).
  * El backend devuelve:
  * - 404 -> "El usuario no se encuentra registrado."
  * - 401 -> "Correo electrónico o contraseña incorrectos."
- * - 200 -> datos públicos del paciente (nunca la contraseña) + un JWT
- *   que identifica la sesión (ver lib/auth/session.ts para persistirlo).
+ * - 200 -> `rol` ("paciente" | "medico"), los datos públicos (nunca la
+ *   contraseña) y un JWT que identifica la sesión. Según el rol, la
+ *   pantalla guarda la sesión de paciente (lib/auth/session.ts) o la de
+ *   médico (lib/auth/medicoSession.ts) y lleva a su vista.
  */
-export async function loginPatient(
+export type LoginResult =
+  | { rol: "paciente"; paciente: AuthenticatedPatient; token: string }
+  | { rol: "medico"; medico: AuthenticatedMedico; token: string };
+
+export async function login(
   email: string,
   password: string
-): Promise<{ paciente: AuthenticatedPatient; token: string }> {
+): Promise<LoginResult> {
   let response: Response;
 
   try {
@@ -66,12 +74,18 @@ export async function loginPatient(
   }
 
   const body = (payload ?? {}) as {
+    rol?: string;
     paciente?: AuthenticatedPatient;
+    medico?: AuthenticatedMedico;
     token?: string;
   };
-  if (!body.paciente || !body.token) {
-    throw new LoginError(response.status, "Respuesta inesperada del servidor.");
+
+  if (body.token && body.rol === "medico" && body.medico) {
+    return { rol: "medico", medico: body.medico, token: body.token };
+  }
+  if (body.token && body.rol === "paciente" && body.paciente) {
+    return { rol: "paciente", paciente: body.paciente, token: body.token };
   }
 
-  return { paciente: body.paciente, token: body.token };
+  throw new LoginError(response.status, "Respuesta inesperada del servidor.");
 }

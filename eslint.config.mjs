@@ -13,6 +13,22 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  // El backend usa CommonJS en la configuración de sequelize-cli y de jest.
+  {
+    files: ["backend/**/*.js"],
+    rules: { "@typescript-eslint/no-require-imports": "off" },
+  },
+  // Los parámetros que empiezan con "_" son intencionalmente no usados
+  // (por ejemplo `_next` en el manejador de errores de Express).
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_" },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

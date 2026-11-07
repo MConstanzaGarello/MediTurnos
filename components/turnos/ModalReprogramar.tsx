@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getHorariosDisponibilidad } from "@/lib/services/turnoService";
-import { getToken } from "@/lib/auth/session";
+import { getHorariosDisponibilidad, reprogramarTurno } from "@/lib/services/turnoService";
 import type { MiTurno, HorarioDisponibilidad } from "@/lib/types/turno";
 import { formatearFecha } from "@/lib/turnos/misTurnos";
 
@@ -15,37 +14,44 @@ interface ModalReprogramarProps {
 export default function ModalReprogramar({ turno, onClose, onSuccess }: ModalReprogramarProps) {
   const [fecha, setFecha] = useState("");
   const [hora, setHora] = useState("");
-  const [horarios, setHorarios] = useState<HorarioDisponibilidad[]>([]);
+  // Horarios cargados para una fecha puntual; se descartan si la fecha cambió.
+  const [cargados, setCargados] = useState<{
+    fecha: string;
+    lista: HorarioDisponibilidad[];
+  } | null>(null);
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
 
+  const horarios = cargados && cargados.fecha === fecha ? cargados.lista : [];
+
   useEffect(() => {
-    if (fecha) {
-      getHorariosDisponibilidad(turno.profesional.id, fecha)
-        .then(setHorarios)
-        .catch(() => setError("Error al cargar horarios."));
-    } else {
-      setHorarios([]);
-    }
-    setHora("");
+    if (!fecha) return;
+
+    let vigente = true;
+    getHorariosDisponibilidad(turno.profesional.id, fecha)
+      .then((lista) => {
+        if (vigente) setCargados({ fecha, lista });
+      })
+      .catch(() => {
+        if (vigente) setError("Error al cargar horarios.");
+      });
+
+    return () => {
+      vigente = false;
+    };
   }, [fecha, turno.profesional.id]);
+
+  function cambiarFecha(nueva: string) {
+    setFecha(nueva);
+    setHora("");
+    setError("");
+  }
 
   const handleReprogramar = async () => {
     setError("");
     setCargando(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/turnos/${turno.id}/reprogramar`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${getToken()}`,
-        },
-        body: JSON.stringify({ fecha, hora }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Error al reprogramar el turno.");
-      
+      await reprogramarTurno(turno.id, fecha, hora);
       onSuccess();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al reprogramar el turno.");
@@ -68,7 +74,7 @@ export default function ModalReprogramar({ turno, onClose, onSuccess }: ModalRep
             <input 
               type="date" 
               className="w-full rounded-lg bg-slate-800 border border-slate-700 px-4 py-3 text-white outline-none focus:border-cyan-400"
-              onChange={(e) => setFecha(e.target.value)}
+              onChange={(e) => cambiarFecha(e.target.value)}
               min={new Date().toISOString().split("T")[0]}
             />
           </div>

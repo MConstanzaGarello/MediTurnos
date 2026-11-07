@@ -47,7 +47,11 @@ export interface ApiErrorResponse {
 }
 
 /** Estados posibles de un turno (ver backend/src/modules/turnos/turno.constants.ts). */
-export type EstadoTurno = "confirmado" | "cancelado";
+export type EstadoTurno =
+  | "confirmado"
+  | "cancelado"
+  | "atendido"
+  | "pendiente";
 
 /**
  * Turno tal como lo devuelve GET /api/turnos/mis-turnos (HU-04), con la

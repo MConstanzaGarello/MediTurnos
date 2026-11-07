@@ -28,6 +28,7 @@ export class Paciente extends Model<
   declare email: string;
   declare telefono: string;
   declare password: string;
+  declare obraSocial: CreationOptional<string | null>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 }
@@ -69,6 +70,11 @@ Paciente.init(
     password: {
       type: DataTypes.STRING(255),
       allowNull: false,
+    },
+    obraSocial: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      field: "obra_social",
     },
     createdAt: {
       type: DataTypes.DATE,

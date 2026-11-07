@@ -21,6 +21,10 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
 
   try {
     const payload = verifySessionToken(token);
+    // Un token de médico no trae pacienteId: no debe servir acá.
+    if (typeof payload.pacienteId !== "number") {
+      throw new Error("Token sin pacienteId.");
+    }
     req.pacienteId = payload.pacienteId;
     next();
   } catch {

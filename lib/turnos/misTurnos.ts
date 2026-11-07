@@ -27,6 +27,8 @@ export const PESTANAS: { id: PestanaTurnos; label: string }[] = [
 export const ETIQUETA_ESTADO: Record<EstadoTurno, string> = {
   confirmado: "Confirmado",
   cancelado: "Cancelado",
+  atendido: "Atendido",
+  pendiente: "Pendiente",
 };
 
 const MESES_CORTOS = [
@@ -67,7 +69,8 @@ export function ordenarTurnos(turnos: MiTurno[]): MiTurno[] {
 
 /**
  * Separa los turnos en las pestañas de la pantalla, ya ordenados:
- * - Próximos: confirmados de hoy en adelante (los turnos programados).
+ * - Próximos: confirmados o pendientes de hoy en adelante (los turnos
+ *   programados). "Pendiente" es un turno que el médico dejó a la espera.
  * - Cancelados: los que el paciente canceló (HU-05), de cualquier fecha.
  *
  * Los confirmados con fecha pasada no se muestran acá: corresponden al
@@ -79,7 +82,9 @@ export function clasificarTurnos(
 ): Record<PestanaTurnos, MiTurno[]> {
   const ordenados = ordenarTurnos(turnos);
   return {
-    proximos: ordenados.filter((t) => t.estado === "confirmado" && t.fecha >= hoy),
+    proximos: ordenados.filter(
+      (t) => (t.estado === "confirmado" || t.estado === "pendiente") && t.fecha >= hoy
+    ),
     cancelados: ordenados.filter((t) => t.estado === "cancelado"),
   };
 }

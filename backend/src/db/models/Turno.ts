@@ -32,7 +32,8 @@ import {
  * horario ocupado ni duplicar un turno vigente en el mismo horario.
  *
  * `estado` (HU-04 / HU-05): "confirmado" por defecto, "cancelado" cuando
- * el paciente lo cancela.
+ * el paciente lo cancela. Portal del Médico: el médico lo puede pasar a
+ * "atendido" o dejarlo "pendiente" (ver turno.constants.ts).
  */
 export class Turno extends Model<
   InferAttributes<Turno>,
@@ -52,6 +53,7 @@ export class Turno extends Model<
   // existen cuando la consulta las pide, por ejemplo en "Mis turnos".
   declare Especialidad?: NonAttribute<Especialidad>;
   declare Profesional?: NonAttribute<Profesional>;
+  declare Paciente?: NonAttribute<Paciente>;
 }
 
 Turno.init(

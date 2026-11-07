@@ -17,6 +17,8 @@ import {
 const ESTILO_ESTADO: Record<MiTurno["estado"], string> = {
   confirmado: "bg-emerald-500/10 text-emerald-400",
   cancelado: "bg-red-500/10 text-red-400",
+  atendido: "bg-cyan-500/10 text-cyan-400",
+  pendiente: "bg-amber-500/10 text-amber-400",
 };
 
 interface TurnoCardProps {
